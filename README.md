@@ -19,15 +19,15 @@ Even something about compatibility with ESP Home and the Arduino IDE is written 
 
 #### The limitations of ESP Home and yaml
 It is possible to generate code in ESP home and it actually has such a low power consumption, that I was not even able to pick it up with my USB power meter.
-However there is one problem. I wand to be compatible with One-Wire devices, I2C and my HX711 weight sensor.
-The first sensor I tried implementing is one of my dallas temperature sensors using the One-Wire protocoll.
-I fired up the code generation process and after exactly 93.82 seconds my professional "ESPHome-YAML-Developer" career came to an end:
+However there is one problem. I want to be compatible with One-Wire devices, I2C and a HX711 weight sensor.
+At first I tried implementing one of my dallas temperature sensors using the One-Wire protocoll.
+I fired up the code generation in ESP Home and after exactly 93.82 seconds my professional "ESPHome-YAML-Developer" career came to an end:
 <img width="2010" height="98" alt="image" src="https://github.com/user-attachments/assets/df24ccdc-0d2e-4281-a9fc-826220a76eed" />
 
-I am not going to pretend to know what happened here but my friend who works as a copilot for Microsoft knows whats up.
-There is currently no library for the usage of one wire devices with the NRF52840 in ESP Home.
+I am not going to pretend to know what happened here, but my friend who works as a copilot for microsoft knows whats up.
+There is currently no library for the usage of one wire devices with the NRF52840 chip in ESP Home.
 At least it looks like smarter people than me are also aware of that problem: https://github.com/esphome/esphome/issues/16163
 
-So let's just scrap the ESP Home approach for now and use something thats let me use my full c programming potential. After all, ESP Home might just be dragging me down (might include sarcasm).
+So let's just scrap the ESP Home approach for now and use something thats lets me use my full c-programming potential. After all, ESP Home might just be dragging me down (might include sarcasm).
 
 #### The Savior? - An avaliable library for NRF52840 in the Arduino IDE
