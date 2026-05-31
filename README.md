@@ -59,7 +59,7 @@ Awesome stuff and let me tell you: Now the real pain begins.
 
 In fact I had to use Ibuprophen 400 just to keep myself motivated.
 > [!Warning]
-> This is just a joke. Don't do drugs, it will lead to bugs in your code.
+> This is just a joke. Don't do drugs, it will ruin your code. (Except caffein. Do lots of caffein. Nobody trusts a programmer that doesn't have a coffee IV in their arm)
 
 I played around with the environment and found out the following facts:
 1. Zigbee is not avaliabe in every SDK version -> v2.9.2 seems to have the required libraries
