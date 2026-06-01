@@ -25,6 +25,7 @@ It is possible to generate code in ESP home and it actually has such a low power
 However there is one problem. I want to be compatible with One-Wire devices, I2C and an HX711 weight sensor.
 At first I tried implementing one of my dallas temperature sensors using the One-Wire protocoll.
 I fired up the code generation in ESP Home and after exactly 93.82 seconds my professional "ESPHome-YAML-Developer" career came to an end:
+
 <img width="2010" height="98" alt="image" src="https://github.com/user-attachments/assets/df24ccdc-0d2e-4281-a9fc-826220a76eed" />
 
 I am not going to pretend to know what happened here, but my friend who works as a copilot for microsoft knows whats up.
@@ -40,7 +41,9 @@ A real developer needs a dark mode and lines of text flying through a terminal a
 However since the Arduino IDE is aimed towards beginners like me I wanted to give it a try.
 Indeed there is a library avaliable to get started with my specific NRF52840 board. 
 So I added the board URL to my preferences and tried out example sketches.
+
 <img width="994" height="663" alt="image" src="https://github.com/user-attachments/assets/d85e8646-102b-4b85-9245-276259d98ea5" />
+
 > [!Important]
 > I am not going to paste the URL here, since this approach will not work anyways and I was running straight against a wall here. Unforfunately my past self didn't know this yet and spent 4 hours of debugging and looking through forums before finally giving up.
 
@@ -49,6 +52,7 @@ Appearently since some version of the nRF Connect SDK, zigbee is not supported a
 I did not even try to do the same thing in PlatformIO for Visual Studio Code, since there I was greeted with two issues:
 1. For connectivity only bluetooth shows up
 2. I cannot even find my Seeed Studio XIAO nrf52840 board
+3. 
 <img width="1349" height="102" alt="image" src="https://github.com/user-attachments/assets/1d6770c4-67f7-4ed2-9a86-60dcbefad9e8" />
 
 #### Going full professional since the Arduino IDE is for beginners
@@ -85,15 +89,18 @@ The LED stayed dark and I fell into a pit of rage.
 After calming myself down by watching videos of cats taking catnip, I did some investigation.
 My guess to what happened is, that I never defined how this uf2 file is supposed to be structured.
 For comparison, this is how a .uf2 file is supposed to look like:
+
 <img width="551" height="27" alt="image" src="https://github.com/user-attachments/assets/5c7e2f65-90aa-47ec-8651-97c2d2a9a1bd" />
 
 And this is what my sleep deprived brain came up with:
+
 <img width="530" height="26" alt="image" src="https://github.com/user-attachments/assets/d36a2f4b-3699-43ad-ba6a-de24c32204c3" />
 
 I wonder what is usually stored between 0x00000 and 0x27000...
 
 In the next few hours I tried to get the blinky sketch running on the nrf52840 using other build environments. First a proper Visual Studio Code + nRF Connect SDK environment. Afterwards just the Arduino IDE and ESPHome.
 It took me quite some time to realize my problem, since the board still shows up as a USB device when I double-click the reset button. It ignores every .uf2 file I try flashing on it. I even wondered at some point if my built-in LED is just broken and so I hooked up a logic analyzer to the D0 Pin to check if it will toggle:
+
 <img width="2111" height="189" alt="image" src="https://github.com/user-attachments/assets/5737b3a4-8dfd-4967-be1f-efa5b4fd9ab9" />
 
 Of course it doesn't. I had just bricked my microcontroller.
@@ -169,16 +176,19 @@ binary_sensor:
       - delayed_on_off: 1s
 ```
 ...and built the code:
+
 <img width="1487" height="497" alt="image" src="https://github.com/user-attachments/assets/a8858051-d406-436f-b410-48ffc335ee9f" />
 
 
 I was even able to flash it to the ESP32 via ESPHome builder and got a connection to Home Assistant via zigbee!
+
 <img width="360" height="302" alt="image" src="https://github.com/user-attachments/assets/799cfdc1-2bd2-464b-bc60-b9a90b599c73" />
 
 Finally I was back where I started with the nrf52840. Something that actually shows up in my zigbee network.
 However there were some - lets call it - inconvieniences.
 
 So first of all I do not want my battery level to show up as normal entity in Home Assistant. I want it to show up like this:
+
 <img width="368" height="305" alt="image" src="https://github.com/user-attachments/assets/73a4959d-c02c-44c2-a729-275edacc2001" />
 
 And the second problem is, that I pull ~20mA from my 5V supply even without sensors attached. This causes also a lot of heat since 5V*20mA=100mW is a lot for such a small device.
@@ -204,9 +214,11 @@ Sometimes I wonder if I am the polar opposite to current, since I am always sear
 
 The steps are similar to the nRF52840. There is a VS Code extension I downloaded.
 After I found for the extension I got my first warning to turn back since the extension had not the best rating:
+
 <img width="763" height="164" alt="image" src="https://github.com/user-attachments/assets/2eb6e46d-5d8f-463b-9994-a42fb853b3ab" />
 
 For comparison, this is the current rating of the PlatformIO IDE extension:
+
 <img width="818" height="181" alt="image" src="https://github.com/user-attachments/assets/b5fa1caf-7be2-40b3-8132-acbc2024e54e" />
 
 I even asked copilot if would be better to use the Arduino IDE or PlatformIO IDE, but it told me to stop whining and use ESP-IDF.
@@ -225,6 +237,34 @@ I was really starting to get mad at this point. This was the second day of me si
 The last thing I did that night was cloning the esp-zigbee-sdk git repository and setting up one of the examples.
 Finally I was able to flash something that at least included header files with "zigbee" in the name.
 Again as always I was not able to find the device in Home Assistant. Even with the help of claude and copilot, the ESP32C6 is stuck in a neverending reboot loop:
+
 <img width="722" height="75" alt="image" src="https://github.com/user-attachments/assets/eca1d644-27b5-4a99-b878-747700be8f9b" />
 
 So I gave up and went to bed. When I laid down I already heard the first birds sing. Maybe it was just my imagination going wild due to the lack of sleep, but I swear these birds are mocking me.
+
+#### Why can I not connect to Home Assitant anymore?
+It was the third day of tinkering with the ESP32C6. I got up from bed, turned on the PC and wanted to check if actually Home Assitant was the root cause of the failed connection.
+I was quite sure that it is not, since I was able to connect before when flashing via ESP Home, but since claude and copilot told me this is the root cause, I wanted to check anyway.
+
+When I tried loading up the main page of home assitant I was greeted with a loading screen. What was going on?
+I tried connecting with my tower PC (which I've been using so far), my laptop and my phone. Nothing..
+
+<img width="899" height="935" alt="image" src="https://github.com/user-attachments/assets/d98c2c16-3981-4e2c-aff3-60855ef263e4" />
+
+
+So I got myself some coffee and on the way back to the PC I saw a yellow light on one of my wifi range extenders. Turns out the fuse to the router which connects all of my devices was turned off by an electrician doing some wiring in the apartment downstairs. Unfortunately for me, after some back and forth everyone came to the conclusion, that a delay in my project is less critical than a dead electrician. I really need to work on my negotiation skills. 
+
+I had no choice. I took my laptop, ESP32C6 and my phone so I could work remotely. The good thing was that I already pushed my latest progress to github. The bad thing: I still had to install all of the extensions to VS code again on my laptop. This also used up all of my data allowance.
+
+After 1 hour of installation I was able to flash the ESP32C6 with my laptop.
+
+#### Strg + C / Strg + V
+All this waiting for installations to finish made me wonder about one thing. How does the actual C-code and the build environment look in ESP Home? What if I could just copy some initial sketch from there and adjust it to fullfil my needs?
+
+I got my third coffee and had one goal. Find the project environment in my home assistant server and then copy it to my PC.
+> [!Important]
+> The timing couldn't have been worse, because appearently it is not possible to ssh into a server, that is not powered on.
+
+I don't want to go to much into detail but I do have a second home assitant server runnning at my parents house. I had no internet at home anyways so I've decided to change my physical development environment (which is my parents kitchen).
+
+I copied the yaml into ESP Home of the second home assistant server and professionally analyzed the compiling process.
