@@ -267,4 +267,33 @@ I got my third coffee and had one goal. Find the project environment in my home 
 
 I don't want to go to much into detail but I do have a second home assitant server runnning at my parents house. I had no internet at home anyways so I've decided to change my physical development environment (which is my parents kitchen).
 
-I copied the yaml into ESP Home of the second home assistant server and professionally analyzed the compiling process.
+I copied the yaml into ESP Home of the second home assistant server and professionally analyzed the compiling process. Then I opened my terminal and ssh'ed into the server.
+
+Here is a picture of what it looked like:
+
+<img width="320" height="320" alt="image" src="https://github.com/user-attachments/assets/bb35ce7e-9e69-4732-bfcc-d2d08f7d07b2" />
+
+
+I did find my esphome files but as you can see there are three .yaml files and only two of them have additional folders. Any guesses which folder I wanted to see?
+
+<img width="2360" height="832" alt="image" src="https://github.com/user-attachments/assets/d7af0dee-7db9-4d52-a240-1f37635dfc1f" />
+
+Yes, there was no folder with the files I was seraching for. According to the build log in ESP Home there is supposed to be a build path here:
+```
+/data/build/beehivelive
+```
+And a python environment here:
+```
+/root/.platformio/penv/.espidf-5.5.4
+```
+They didn't exist either.. So I had to get another cup of coffee.
+
+Overall I sat there in the kitchen until the sun went down and I learned the following facts the hard way:
+1. Since some version (I forgot the exact one) ESP Home builds the code with containers
+2. Home Assistant doesn't allow me to access these containers via SSH
+
+What was my last option? Connect a monitor to my raspberry pi which runs my home assistant server. My parents were watching TV but now they had to watch the file system of home assistant.
+
+> [!Note]
+> I really don't know what I was tying to achieve. Getting the environment form the server didn't even mean I would be able to do something actually usefull with it.
+
