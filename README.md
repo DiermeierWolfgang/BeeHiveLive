@@ -297,3 +297,7 @@ What was my last option? Connect a monitor to my raspberry pi which runs my home
 > [!Note]
 > I really don't know what I was tying to achieve. Getting the environment form the server didn't even mean I would be able to do something actually usefull with it.
 
+## Hardware Development
+Yes I developed custom PCBs for the project.
+## Testing
+Testing of the 
