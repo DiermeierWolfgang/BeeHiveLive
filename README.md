@@ -26,11 +26,14 @@ However there is one problem. I want to be compatible with One-Wire devices, I2C
 At first I tried implementing one of my dallas temperature sensors using the One-Wire protocoll.
 I fired up the code generation in ESP Home and after exactly 93.82 seconds my professional "ESPHome-YAML-Developer" career came to an end:
 
+<p align="center">
 <img width="2010" height="98" alt="image" src="https://github.com/user-attachments/assets/df24ccdc-0d2e-4281-a9fc-826220a76eed" />
+</p>
 
 I am not going to pretend to know what happened here, but my friend who works as a copilot for microsoft knows whats up.
 There is currently no library for the usage of one wire devices with the NRF52840 chip in ESP Home.
 At least it looks like smarter people than me are also aware of that problem: https://github.com/esphome/esphome/issues/16163
+
 
 So I just scraped the ESP Home approach for now and used something that lets me use my full c-programming potential. After all, ESP Home might just be dragging me down (might include sarcasm).
 
@@ -42,7 +45,9 @@ However since the Arduino IDE is aimed towards beginners like me I wanted to giv
 Indeed there is a library avaliable to get started with my specific NRF52840 board. 
 So I added the board URL to my preferences and tried out example sketches.
 
-<img width="994" height="663" alt="image" src="https://github.com/user-attachments/assets/d85e8646-102b-4b85-9245-276259d98ea5" />
+<p align="center">
+<img width="696" height="464" alt="image" src="https://github.com/user-attachments/assets/d85e8646-102b-4b85-9245-276259d98ea5" />
+</p>
 
 > [!Important]
 > I am not going to paste the URL here, since this approach will not work anyways and I was running straight against a wall here. Unforfunately my past self didn't know this yet and spent 4 hours of debugging and looking through forums before finally giving up.
@@ -52,8 +57,10 @@ Appearently since some version of the nRF Connect SDK, zigbee is not supported a
 I did not even try to do the same thing in PlatformIO for Visual Studio Code, since there I was greeted with two issues:
 1. For connectivity only bluetooth shows up
 2. I cannot even find my Seeed Studio XIAO nrf52840 board
-3. 
+
+<p align="center">
 <img width="1349" height="102" alt="image" src="https://github.com/user-attachments/assets/1d6770c4-67f7-4ed2-9a86-60dcbefad9e8" />
+</p>
 
 #### Going full professional since the Arduino IDE is for beginners
 I guess after 14+ hours without sleep infront of three monitors with one of them only playing music videos, I can call myself professional developer. I somehow feel the urge to go to a TED talk and tell people about my journey.
@@ -90,18 +97,24 @@ After calming myself down by watching videos of cats taking catnip, I did some i
 My guess to what happened is, that I never defined how this uf2 file is supposed to be structured.
 For comparison, this is how a .uf2 file is supposed to look like:
 
+<p align="center">
 <img width="551" height="27" alt="image" src="https://github.com/user-attachments/assets/5c7e2f65-90aa-47ec-8651-97c2d2a9a1bd" />
+</p>
 
 And this is what my sleep deprived brain came up with:
 
+<p align="center">
 <img width="530" height="26" alt="image" src="https://github.com/user-attachments/assets/d36a2f4b-3699-43ad-ba6a-de24c32204c3" />
+</p>
 
 I wonder what is usually stored between 0x00000 and 0x27000...
 
 In the next few hours I tried to get the blinky sketch running on the nrf52840 using other build environments. First a proper Visual Studio Code + nRF Connect SDK environment. Afterwards just the Arduino IDE and ESPHome.
 It took me quite some time to realize my problem, since the board still shows up as a USB device when I double-click the reset button. It ignores every .uf2 file I try flashing on it. I even wondered at some point if my built-in LED is just broken and so I hooked up a logic analyzer to the D0 Pin to check if it will toggle:
 
+<p align="center">
 <img width="2111" height="189" alt="image" src="https://github.com/user-attachments/assets/5737b3a4-8dfd-4967-be1f-efa5b4fd9ab9" />
+</p>
 
 Of course it doesn't. I had just bricked my microcontroller.
 Impressive how far you can make it with a masters degree in electrical engineering.
@@ -177,19 +190,24 @@ binary_sensor:
 ```
 ...and built the code:
 
+<p align="center">
 <img width="1487" height="497" alt="image" src="https://github.com/user-attachments/assets/a8858051-d406-436f-b410-48ffc335ee9f" />
-
+</p>
 
 I was even able to flash it to the ESP32 via ESPHome builder and got a connection to Home Assistant via zigbee!
 
+<p align="center">
 <img width="360" height="302" alt="image" src="https://github.com/user-attachments/assets/799cfdc1-2bd2-464b-bc60-b9a90b599c73" />
+</p>
 
 Finally I was back where I started with the nrf52840. Something that actually shows up in my zigbee network.
 However there were some - lets call it - inconvieniences.
 
 So first of all I do not want my battery level to show up as normal entity in Home Assistant. I want it to show up like this:
 
+<p align="center">
 <img width="368" height="305" alt="image" src="https://github.com/user-attachments/assets/73a4959d-c02c-44c2-a729-275edacc2001" />
+</p>
 
 And the second problem is, that I pull ~20mA from my 5V supply even without sensors attached. This causes also a lot of heat since 5V*20mA=100mW is a lot for such a small device.
 
@@ -209,17 +227,24 @@ Anyways I had two options. Use the progress I made so far with ESP Home or find 
 After I looked at this table for some time I just shrugged my shoulders, got a bottle of spezi and got to work.
 
 #### ESP-IDF - The worst rated VS Code plugin I've ever used
+> [!Important]
+> This is not a recommendation. I never got it to work and it is not a beginner friendly route.
+
 So yes after my short success with ESP Home it was of course only logical to go back into c-programming.
 Sometimes I wonder if I am the polar opposite to current, since I am always searching for the path of highest resistance (small joke you learn as electrical engineer).
 
 The steps are similar to the nRF52840. There is a VS Code extension I downloaded.
 After I found for the extension I got my first warning to turn back since the extension had not the best rating:
 
-<img width="763" height="164" alt="image" src="https://github.com/user-attachments/assets/2eb6e46d-5d8f-463b-9994-a42fb853b3ab" />
+<p align="center">
+<img width="382" height="82" alt="image" src="https://github.com/user-attachments/assets/2eb6e46d-5d8f-463b-9994-a42fb853b3ab" />
+</p>
 
 For comparison, this is the current rating of the PlatformIO IDE extension:
 
-<img width="818" height="181" alt="image" src="https://github.com/user-attachments/assets/b5fa1caf-7be2-40b3-8132-acbc2024e54e" />
+<p align="center">
+<img width="409" height="91" alt="image" src="https://github.com/user-attachments/assets/b5fa1caf-7be2-40b3-8132-acbc2024e54e" />
+</p>
 
 I even asked copilot if would be better to use the Arduino IDE or PlatformIO IDE, but it told me to stop whining and use ESP-IDF.
 
@@ -238,7 +263,9 @@ The last thing I did that night was cloning the esp-zigbee-sdk git repository an
 Finally I was able to flash something that at least included header files with "zigbee" in the name.
 Again as always I was not able to find the device in Home Assistant. Even with the help of claude and copilot, the ESP32C6 is stuck in a neverending reboot loop:
 
+<p align="center">
 <img width="722" height="75" alt="image" src="https://github.com/user-attachments/assets/eca1d644-27b5-4a99-b878-747700be8f9b" />
+</p>
 
 So I gave up and went to bed. When I laid down I already heard the first birds sing. Maybe it was just my imagination going wild due to the lack of sleep, but I swear these birds are mocking me.
 
@@ -249,8 +276,9 @@ I was quite sure that it is not, since I was able to connect before when flashin
 When I tried loading up the main page of home assitant I was greeted with a loading screen. What was going on?
 I tried connecting with my tower PC (which I've been using so far), my laptop and my phone. Nothing..
 
-<img width="899" height="935" alt="image" src="https://github.com/user-attachments/assets/d98c2c16-3981-4e2c-aff3-60855ef263e4" />
-
+<p align="center">
+<img width="350" height="360" alt="image" src="https://github.com/user-attachments/assets/d98c2c16-3981-4e2c-aff3-60855ef263e4" />
+</p>
 
 So I got myself some coffee and on the way back to the PC I saw a yellow light on one of my wifi range extenders. Turns out the fuse to the router which connects all of my devices was turned off by an electrician doing some wiring in the apartment downstairs. Unfortunately for me, after some back and forth everyone came to the conclusion, that a delay in my project is less critical than a dead electrician. I really need to work on my negotiation skills. 
 
@@ -262,7 +290,7 @@ After 1 hour of installation I was able to flash the ESP32C6 with my laptop.
 All this waiting for installations to finish made me wonder about one thing. How does the actual C-code and the build environment look in ESP Home? What if I could just copy some initial sketch from there and adjust it to fullfil my needs?
 
 I got my third coffee and had one goal. Find the project environment in my home assistant server and then copy it to my PC.
-> [!Important]
+> [!Tip]
 > The timing couldn't have been worse, because appearently it is not possible to ssh into a server, that is not powered on.
 
 I don't want to go to much into detail but I do have a second home assitant server runnning at my parents house. I had no internet at home anyways so I've decided to change my physical development environment (which is my parents kitchen).
@@ -271,12 +299,15 @@ I copied the yaml into ESP Home of the second home assistant server and professi
 
 Here is a picture of what it looked like:
 
+<p align="center">
 <img width="320" height="320" alt="image" src="https://github.com/user-attachments/assets/bb35ce7e-9e69-4732-bfcc-d2d08f7d07b2" />
-
+</p>
 
 I did find my esphome files but as you can see there are three .yaml files and only two of them have additional folders. Any guesses which folder I wanted to see?
 
+<p align="center">
 <img width="2360" height="832" alt="image" src="https://github.com/user-attachments/assets/d7af0dee-7db9-4d52-a240-1f37635dfc1f" />
+</p>
 
 Yes, there was no folder with the files I was seraching for. According to the build log in ESP Home there is supposed to be a build path here:
 ```
@@ -292,10 +323,38 @@ Overall I sat there in the kitchen until the sun went down and I learned the fol
 1. Since some version (I forgot the exact one) ESP Home builds the code with containers
 2. Home Assistant doesn't allow me to access these containers via SSH
 
-What was my last option? Connect a monitor to my raspberry pi which runs my home assistant server. My parents were watching TV but now they had to watch the file system of home assistant.
+What was my last option? Connect a monitor to my raspberry pi which runs my home assistant server. This was not an option, since the only avaliable monitor was the TV my parents used at the time. Again I had to find an alternative solution...
 
 > [!Note]
-> I really don't know what I was tying to achieve. Getting the environment form the server didn't even mean I would be able to do something actually usefull with it.
+> I really don't know what I was tying to achieve anyways. Getting the environment form the server didn't even mean I would be able to do something actually usefull with it.
+
+Believe it or not but I am actually lazy. If I have the possibility to automate a 5 second task, I will gladly put 2 weeks of development in some sort of McGyver automation.
+Still there is a limit for me of how much time I want to waste, when there are easier ways.
+I started up youtube and typed "ESP-IDF Zigbee" in the search bar and realisied, that noone used the VS code ESP-IDF extension. Everyone was just using the Arduino IDE.
+
+This ment I finally came back to my senses and started developing on the most reasonable approach: ESP32C6 + Arduino IDE
+
+#### Arduino IDE might not be that bad after all
+The statement "most reasonable approach" did not mean, that I would immediately write 1000 lines of code and just flash them without any other obstructions in my way.
+On a positive note I was able to flash the Zigbee_Temperature_Sensor example immediately.
+So far so good, it also showed up in Home Assistant and even reported temperature reading of the internal sensor. (Time to reward myself with another cup of coffee)
+
+However when I frankensteined the Zigbee_Temperature_Sensor and the Zigbee_Analog_Input_Output together, the device did not connect and I recieved loads of Zigbee Stack faults on the serial monitor.
+Nothing I tried to change in the C-code seemed to work, exept removing the _zbAnalogSensor.reportTemperature()_ function call.
+There is a limited amount of faults I can handle per day so I went to bed and woke up the next day to the sound of an impact drill in the ceiling below me.
+
+After a healthy amount of sleep I remembered one of the youtube tutorials. The creator said to always erase the flash before reprogramming.
+> [!Important]
+> Tools -> Erase All Flash Before Sketch Upload -> Enabled
+
+I selected the same settings and there it was. Finally an analog reading inside Home Assistant!
+
+> [!Note]
+> It is quite hot in the summer when you are living directly below the roof.
+
+<p align="center">
+<img width="364" height="257" alt="image" src="https://github.com/user-attachments/assets/2c6d8c83-4fc4-48bf-8cb9-18eba7c816fe" />
+</p>
 
 ## Hardware Development
 Yes I developed custom PCBs for the project.
