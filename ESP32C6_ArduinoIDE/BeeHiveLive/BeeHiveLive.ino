@@ -57,10 +57,9 @@ void internal_temp_sensor_value_update() {
 /************************ Battery SoC sensor *****************************/
 void soc_sensor_value_update() {
   int   adc_value = analogRead(BATTERY_VOLTAGE_PIN);
-  float voltage   = (adc_value / 1023.0f) * 3.3f * 1.694915254237288;
-
-  // Beispiel: Li-Ion 3.0–4.2V → SoC 0–100%
-  float soc = (voltage - 3.0f) * (100.0f / (4.2f - 3.0f));
+  
+  float voltage   = (adc_value / 1023.0f) * 3.3f * 1.694915254237288;   // 1023: 10-bit adc / 3.3: max voltage / 1.69... voltage divider
+  float soc = (voltage - 3.0f) * (100.0f / (4.2f - 3.0f));              // Li-Ion 3.0–4.2V → SoC 0–100%
   soc = constrain(soc, 0.0f, 100.0f);
 
   Serial.printf("Battery ADC=%d Voltage=%.2fV SoC=%.1f%%\r\n",
@@ -71,17 +70,15 @@ void soc_sensor_value_update() {
 }
 
 float readOneWireTemp() {
-    int16_t raw;
-    for (int i = 0; i < 3; i++) {
-        if (readRaw(raw)) {
-            return raw / 16.0;
-        }
-    }
-    return NAN; // if 3 fail
-}
+  uint8_t oneWireAddr[8];
+  uint8_t rawOneWiredata[9];
 
-bool readRaw(int16_t &raw) {
-    uint8_t data[9];
+  for (int i = 0; i < 3; i++) {
+    oneWire.searchReset();
+    if (!oneWire.search(oneWireAddr)) {
+      Serial.print("No more addresses.\n");
+    }
+    
     oneWire.reset();
     oneWire.writeByte(0xCC);
     oneWire.writeByte(0x44);
@@ -90,12 +87,27 @@ bool readRaw(int16_t &raw) {
     oneWire.writeByte(0xCC);
     oneWire.writeByte(0xBE);
     for (int i = 0; i < 9; i++) {
-        data[i] = oneWire.readByte();
+      rawOneWiredata[i] = oneWire.readByte();
     }
-    uint8_t crc = oneWire.crc8(data, 8);
-    if (crc != data[8]) return false;
-    raw = (data[1] << 8) | data[0];
-    return true;
+    uint8_t crc = oneWire.crc8(rawOneWiredata, 8);
+
+    Serial.printf("One Wire Addr: ");
+    for(int i = 7; i >= 0; i--) {
+      Serial.printf("%x ", oneWireAddr[i]);
+    }
+    Serial.printf("\nOne Wire Data: ");
+    for (int i = 8; i >= 0; i--) {
+      Serial.printf("%x ", rawOneWiredata[i]);
+    }
+    Serial.println();
+    if (crc == rawOneWiredata[8]){
+      uint16_t result = (rawOneWiredata[1] << 8) | rawOneWiredata[0];
+      return result / 16.0;
+    } else {
+      Serial.println("CRC fail\n");
+    }
+  }
+  return NAN;
 }
 
 void dallas_temp_sensor_value_update() {
@@ -166,7 +178,7 @@ void loop() {
       }
     }
   }
-  delay(1000);
+  delay(10000);
   internal_temp_sensor_value_update();
   soc_sensor_value_update();
   dallas_temp_sensor_value_update();
