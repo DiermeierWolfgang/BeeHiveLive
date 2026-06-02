@@ -367,7 +367,7 @@ float soc = (voltage - 3.0f) * (100.0f / (4.2f - 3.0f));              // Li-Ion 
 ```
 
 <p align="center">
-<img width="789" height="561" alt="image" src="https://github.com/user-attachments/assets/fe5fad6b-6b62-430c-b2da-39ada4de5522" />
+<img width="316" height="224" alt="image" src="https://github.com/user-attachments/assets/fe5fad6b-6b62-430c-b2da-39ada4de5522" />
 </p>
 
 As a next step I included the DS18B20 sensors I had still at home. I tried using the DallasTemperature library and found out that __again the libraries is not compatible with my ESP32C6__.
@@ -399,7 +399,7 @@ I used the serial monitor to show their addresses and connected my three sensors
 </p>
 
 > [!Note]
-> What now follows shows quite clearly, why sleep and brakes are important (especially coffee brakes)!
+> What now follows shows quite clearly, why sleep and breakes are important (especially coffee breakes)!
 
 Seeing the address shown from least significant byte to most significant in my serial monitor was triggering to me and annoyed me so I did a quick fix in my code. Nothing special, just one changed line:
 ```
