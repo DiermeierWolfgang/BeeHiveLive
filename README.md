@@ -201,7 +201,7 @@ I was even able to flash it to the ESP32 via ESPHome builder and got a connectio
 </p>
 
 Finally I was back where I started with the nrf52840. Something that actually shows up in my zigbee network.
-However there were some - lets call it - inconvieniences.
+However there were some - lets call it - inconveniences.
 
 So first of all I do not want my battery level to show up as normal entity in Home Assistant. I want it to show up like this:
 
@@ -212,6 +212,8 @@ So first of all I do not want my battery level to show up as normal entity in Ho
 And the second problem is, that I pull ~20mA from my 5V supply even without sensors attached. This causes also a lot of heat since 5V*20mA=100mW is a lot for such a small device.
 
 The current draw also made me realize an oversight I have in my hardare design. I am powering all of my sensors from 3.3V at all times. Even if the microcontroller doesn't read any values. This will drain my battery quickly and sounds like a problem for my future self.
+
+> Note from future self: Why are you doing this to me?
 
 Anyways I had two options. Use the progress I made so far with ESP Home or find an alternative solution. I had only one day left before my custom PCBs arrived so it was time to finalize my code. So I made a list to help me with my decission. It is never good to rush into things.
 
@@ -234,7 +236,7 @@ So yes after my short success with ESP Home it was of course only logical to go 
 Sometimes I wonder if I am the polar opposite to current, since I am always searching for the path of highest resistance (small joke you learn as electrical engineer).
 
 The steps are similar to the nRF52840. There is a VS Code extension I downloaded.
-After I found for the extension I got my first warning to turn back since the extension had not the best rating:
+After I found the extension I got my first sign to turn back since the extension had not the best rating:
 
 <p align="center">
 <img width="382" height="82" alt="image" src="https://github.com/user-attachments/assets/2eb6e46d-5d8f-463b-9994-a42fb853b3ab" />
@@ -358,7 +360,10 @@ I selected the same settings and there it was. Finally an analog reading inside 
 
 Of course it is not 183°C inside, this was just the raw ADC value of the battery voltage measurment (which was alos not connected at this point). Initially I tried to get the battery SoC reading to show up again in the power configuration cluster. Appearently this is where this kind of information is supposed to show up for a zigbee device.
 
-After digging through the Arduino libraries I even found an enumerator inside _esp_zigbee_zcl_common.h_ listing all the clusters, but unfortunately not all of them are ready to use "out of the box" like temperature or analog readings. I wasted another 3 hours tinkering and will solve this sometime in the future. It is just another problem I can ignore until I will regret it. Similar to the backpain I developed 2 days ago.
+After digging through the Arduino libraries I even found an enumerator inside _esp_zigbee_zcl_common.h_ listing all the clusters, but unfortunately not all of them are ready to use "out of the box" like temperature or analog readings. I wasted another 3 hours tinkering and will solve this sometime in the future. Kind regards to my future self. 
+> Note from future self: Again?
+
+It is just another problem I can ignore until I will regret it. Similar to the backpain I developed 2 days ago.
 
 For now the SoC is just shows up as percentage value. That should be good enough. It is calculated by a simple formula taking a voltage divider in my circuit and the analog resolution into account:
 ```
@@ -377,7 +382,8 @@ As a next step I included the DS18B20 sensors I had still at home. I tried using
 
 At least there is a 1-Wire library that is compatible and with [some code I stole from this forum](https://forum.seeedstudio.com/t/xiao-esp32c6-and-the-ds18b20/293778/10) I was able to finally transmit my first external temperature reading from the ESP32C6 to Home Assitant!
 
-The downside is, it works as long as there is only one sensor connected, but I threw a little party by myself in the room anyways.
+The downside is, it only works as long as there are not multiple sensors connected on the same 1-Wire bus. I threw a little party by myself in the room anyways.
+Developing can be quite rewarding 0.5% of the time.
 
 <p align="center">
   <img width="366" height="315" alt="image" src="https://github.com/user-attachments/assets/8ababb56-84fd-47c7-bb09-aea204044e6e" />
@@ -401,7 +407,7 @@ I used the serial monitor to show their addresses and connected my three sensors
 > [!Note]
 > What now follows shows quite clearly, why sleep and breakes are important (especially coffee breakes)!
 
-Seeing the address shown from least significant byte to most significant in my serial monitor was triggering to me and annoyed me so I did a quick fix in my code. Nothing special, just one changed line:
+Seeing the address shown from least significant byte to most significant in my serial monitor was triggering to me and so I decided to implement a quick fix in my code. Nothing special, just one altered line:
 ```
 old: for(int i = 0; i < 8; i++)
 new: for(int i = 8; i >= 0; i++)
@@ -409,7 +415,9 @@ new: for(int i = 8; i >= 0; i++)
 correct: for(int i = 7; i >= 0; i--)
 ```
 
-The ESP32C6 did not like this one bit and crashed on me over and over again. It is quite embarrasing how long it took me to find this bug, since I thought I caused timing issues due to my excessive use of _serial.print()_.
+I don't want to exaggerate but there is only one programming mistake in human history that had similar consequences and that would be the self destruction of the [Ariane 5 Flight 501](https://en.wikipedia.org/wiki/Ariane_flight_V88).
+
+The ESP32C6 did not like counting into interger overflow one bit and crashed on me over and over again. It is quite embarrasing how long it took me to find this bug, since I thought I caused timing issues due to my excessive use of _serial.print()_.
 How did I come to this conclusion? Because the code didn't crash when I commented out my serial communication calls (which included the for loop).
 
 <p align="center">
