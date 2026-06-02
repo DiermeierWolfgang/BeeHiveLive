@@ -39,8 +39,8 @@ void soc_sensor_value_update() {
                 adc_value, voltage, soc);
 
   // Wir senden SoC als Analog Input (float)
-  zbSocSensor.setAnalogInput(soc);
-  //zbSocSensor.reportAnalogInput();
+  zbSocSensor.setAnalogInput(adc_value);
+  zbSocSensor.reportAnalogInput();
 }
 
 /********************* Arduino functions **************************/
@@ -50,16 +50,21 @@ void setup() {
   // Init button switch
   pinMode(button, INPUT_PULLUP);
 
-  //analogReadResolution(10);
-
   // Optional: set Zigbee device name and model
   zbTempSensor.setManufacturerAndModel("CustomPCB_V2.0", "BeeHiveLive");
-
   // Set minimum and maximum temperature measurement value (10-50°C is default range for chip temperature measurement)
   zbTempSensor.setMinMaxValue(10, 50);
-
   // Optional: Set default (initial) value for the temperature sensor to 10.0°C to match the minimum temperature measurement value
   zbTempSensor.setDefaultValue(10.0);
+
+  // init analog sensor
+  pinMode(A2, INPUT);
+  analogReadResolution(10);
+  zbSocSensor.addAnalogInput();
+  zbSocSensor.setAnalogInputApplication(ESP_ZB_ZCL_AI_TEMPERATURE_OTHER);  // Generic Sensor
+  zbSocSensor.setAnalogInputDescription("ADC Sensor");
+  zbSocSensor.setAnalogInputResolution(0.1);
+  zbSocSensor.setAnalogInputMinMax(0.0, 100.0);
 
   // Endpoints registrieren
   Zigbee.addEndpoint(&zbTempSensor);
@@ -80,11 +85,12 @@ void setup() {
     delay(100);
   }
   Serial.println();
+  delay(500);
 
   // Start Temperature sensor reading task
   //xTaskCreate(temp_sensor_value_update, "temp_sensor_update", 2048, NULL, 10, NULL);
-  temp_sensor_value_update();
-  soc_sensor_value_update();
+  //temp_sensor_value_update();
+  //soc_sensor_value_update();
   // Set reporting interval for temperature measurement in seconds, must be called after Zigbee.begin()
   // min_interval and max_interval in seconds, delta (temp change in 0,1 °C)
   // if min = 1 and max = 0, reporting is sent only when temperature changes by delta
@@ -119,5 +125,6 @@ void loop() {
     zbTempSensor.reportTemperature();
   }
   temp_sensor_value_update();
+  soc_sensor_value_update();
   delay(1000);
 }
