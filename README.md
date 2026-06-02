@@ -356,6 +356,33 @@ I selected the same settings and there it was. Finally an analog reading inside 
 <img width="364" height="257" alt="image" src="https://github.com/user-attachments/assets/2c6d8c83-4fc4-48bf-8cb9-18eba7c816fe" />
 </p>
 
+Of course it is not 183°C inside, this was just the raw ADC value of the battery voltage measurment (which was alos not connected at this point). Initially I tried to get the battery SoC reading to show up again in the power configuration cluster. Appearently this is where this kind of information is supposed to show up for a zigbee device.
+
+After digging through the Arduino libraries I even found an enumerator inside _esp_zigbee_zcl_common.h_ listing all the clusters, but unfortunately not all of them are ready to use "out of the box" like temperature or analog readings. I wasted another 3 hours tinkering and will solve this sometime in the future. It is just another problem I can ignore until I will regret it. Similar to the backpain I developed 2 days ago.
+
+For now the SoC is just shows up as percentage value. That should be good enough. It is calculated by a simple formula taking a voltage divider in my circuit and the analog resolution into account:
+```
+float voltage   = (adc_value / 1023.0f) * 3.3f * 1.694915254237288;   // 1023: 10-bit adc / 3.3: max voltage / 1.69... voltage divider
+float soc = (voltage - 3.0f) * (100.0f / (4.2f - 3.0f));              // Li-Ion 3.0–4.2V → SoC 0–100%
+```
+
+<p align="center">
+<img width="789" height="561" alt="image" src="https://github.com/user-attachments/assets/fe5fad6b-6b62-430c-b2da-39ada4de5522" />
+</p>
+
+As a next step I included the DS18B20 sensors I had still at home. I tried using the DallasTemperature library and found out that __again the libraries is not compatible with my ESP32C6__.
+
+> [!Note]
+> Using the newest version of a microcontroller can be quite challenging if you lack experience like me.
+
+At least there is a One Wire library that is compatible and with [some code I stole from this forum](https://forum.seeedstudio.com/t/xiao-esp32c6-and-the-ds18b20/293778/10) I was able to finally transmit my first external temperature reading from the ESP32C6 to Home Assitant!
+
+The downside is, it works as long as there is only one sensor connected, but I threw a little party by myself in the room anyways.
+
+<p align="center">
+  <img width="366" height="315" alt="image" src="https://github.com/user-attachments/assets/8ababb56-84fd-47c7-bb09-aea204044e6e" />
+</p>
+
 ## Hardware Development
 Yes I developed custom PCBs for the project.
 ## Testing
