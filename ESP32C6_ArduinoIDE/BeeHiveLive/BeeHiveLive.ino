@@ -1,35 +1,63 @@
-#include <Arduino.h>
 #ifndef ZIGBEE_MODE_ED
 #error "Zigbee end device mode is not selected in Tools->Zigbee mode"
 #endif
 
-#include "Zigbee.h"
+// Add required libraries
+#include <Arduino.h>
+#include <OneWireNg_CurrentPlatform.h>
+#include <Zigbee.h>
 
-/* Zigbee temperature sensor configuration */
-#define TEMP_SENSOR_ENDPOINT_NUMBER 1
+// Input/Output definition
+#define BATTERY_VOLTAGE_PIN A2
+#define ONE_WIRE_BUS D4
+
+// Zigbee endpoint sensor configuration
+#define INTERNAL_TEMP_SENSOR_ENDPOINT_NUMBER 1
 #define SOC_SENSOR_ENDPOINT_NUMBER 2
-uint8_t button = BOOT_PIN;
+#define DALLAS_TEMP_SENSOR_ENDPOINT_NUMBER 3
 
-ZigbeeTempSensor zbTempSensor = ZigbeeTempSensor(TEMP_SENSOR_ENDPOINT_NUMBER);
+ZigbeeTempSensor zbInternalTempSensor = ZigbeeTempSensor(INTERNAL_TEMP_SENSOR_ENDPOINT_NUMBER);
 ZigbeeAnalog zbSocSensor = ZigbeeAnalog(SOC_SENSOR_ENDPOINT_NUMBER);
+ZigbeeTempSensor zbDallasTempSensor = ZigbeeTempSensor(DALLAS_TEMP_SENSOR_ENDPOINT_NUMBER);
+
+OneWireNg_CurrentPlatform oneWire(ONE_WIRE_BUS, true);
+//DallasTemperature dallasSensors(&oneWire);
+
+void initInternalTempSensor() {
+  zbInternalTempSensor.setManufacturerAndModel("Wolfgang Diermeier", "BeeHiveLive");              // Set Zigbee device name and model
+  zbInternalTempSensor.setMinMaxValue(10, 50);                                                    // Set minimum and maximum temperature measurement value (10-50°C is default range for chip temperature measurement)
+  zbInternalTempSensor.setDefaultValue(10.0);                                                     // Optional: Set default (initial) value for the temperature sensor to 10.0°C to match the minimum temperature measurement value
+  Zigbee.addEndpoint(&zbInternalTempSensor);                                                      // Register end point
+}
+
+void initAnalogSensor() {
+  pinMode(BATTERY_VOLTAGE_PIN, INPUT);                                                            // Configure Pin as input
+  zbSocSensor.addAnalogInput();                                                                   // Adding analog input
+  zbSocSensor.setAnalogInputApplication(ESP_ZB_ZCL_AI_PERCENTAGE_OTHER);                          // Define senor reading as percentage value
+  zbSocSensor.setAnalogInputDescription("ADC Sensor");                                            // 
+  zbSocSensor.setAnalogInputResolution(0.1);
+  zbSocSensor.setAnalogInputMinMax(0.0, 100.0);
+  Zigbee.addEndpoint(&zbSocSensor);
+}
+
+void initDallas() {
+  zbDallasTempSensor.setMinMaxValue(-40, 85);                                                   // Set minimum and maximum temperature measurement value
+  zbDallasTempSensor.setDefaultValue(20.0);                                                     // Optional: Set default (initial) value for the temperature sensor to 20.0°C
+  Zigbee.addEndpoint(&zbDallasTempSensor);                                                     // Register end point
+}
 
 /************************ Temp sensor *****************************/
-static void temp_sensor_value_update() {  //void *arg) {
-                                          //for (;;) {
-  // Read temperature sensor value
+void internal_temp_sensor_value_update() {
   float tsens_value = temperatureRead();
-  Serial.printf("Updated temperature sensor value to %.2f°C\r\n", tsens_value);
-  // Update temperature value in Temperature sensor EP
-  zbTempSensor.setTemperature(tsens_value);
-  zbTempSensor.reportTemperature();
-  //delay(1000);
-  //}
+  Serial.printf("Updated internal temperature sensor value to %.2f°C\r\n", tsens_value);
+  zbInternalTempSensor.setTemperature(tsens_value);
+  zbInternalTempSensor.reportTemperature();
 }
 
 /************************ Battery SoC sensor *****************************/
 void soc_sensor_value_update() {
-  int   adc_value = analogRead(A2);
-  float voltage   = (adc_value / 4095.0f) * 3.3f;
+  int   adc_value = analogRead(BATTERY_VOLTAGE_PIN);
+  float voltage   = (adc_value / 1023.0f) * 3.3f * 1.694915254237288;
 
   // Beispiel: Li-Ion 3.0–4.2V → SoC 0–100%
   float soc = (voltage - 3.0f) * (100.0f / (4.2f - 3.0f));
@@ -38,37 +66,56 @@ void soc_sensor_value_update() {
   Serial.printf("Battery ADC=%d Voltage=%.2fV SoC=%.1f%%\r\n",
                 adc_value, voltage, soc);
 
-  // Wir senden SoC als Analog Input (float)
-  zbSocSensor.setAnalogInput(adc_value);
+  zbSocSensor.setAnalogInput(soc);
   zbSocSensor.reportAnalogInput();
+}
+
+float readOneWireTemp() {
+    int16_t raw;
+    for (int i = 0; i < 3; i++) {
+        if (readRaw(raw)) {
+            return raw / 16.0;
+        }
+    }
+    return NAN; // if 3 fail
+}
+
+bool readRaw(int16_t &raw) {
+    uint8_t data[9];
+    oneWire.reset();
+    oneWire.writeByte(0xCC);
+    oneWire.writeByte(0x44);
+    delay(800);
+    oneWire.reset();
+    oneWire.writeByte(0xCC);
+    oneWire.writeByte(0xBE);
+    for (int i = 0; i < 9; i++) {
+        data[i] = oneWire.readByte();
+    }
+    uint8_t crc = oneWire.crc8(data, 8);
+    if (crc != data[8]) return false;
+    raw = (data[1] << 8) | data[0];
+    return true;
+}
+
+void dallas_temp_sensor_value_update() {
+  float tsens_value = readOneWireTemp();
+  Serial.printf("Updated external temperature sensor value to %.2f°C\r\n", tsens_value);
+  
+  zbDallasTempSensor.setTemperature(tsens_value);
+  zbDallasTempSensor.reportTemperature();
 }
 
 /********************* Arduino functions **************************/
 void setup() {
   Serial.begin(115200);
-
+  
   // Init button switch
-  pinMode(button, INPUT_PULLUP);
+  pinMode(BOOT_PIN, INPUT_PULLUP);
 
-  // Optional: set Zigbee device name and model
-  zbTempSensor.setManufacturerAndModel("CustomPCB_V2.0", "BeeHiveLive");
-  // Set minimum and maximum temperature measurement value (10-50°C is default range for chip temperature measurement)
-  zbTempSensor.setMinMaxValue(10, 50);
-  // Optional: Set default (initial) value for the temperature sensor to 10.0°C to match the minimum temperature measurement value
-  zbTempSensor.setDefaultValue(10.0);
-
-  // init analog sensor
-  pinMode(A2, INPUT);
-  analogReadResolution(10);
-  zbSocSensor.addAnalogInput();
-  zbSocSensor.setAnalogInputApplication(ESP_ZB_ZCL_AI_TEMPERATURE_OTHER);  // Generic Sensor
-  zbSocSensor.setAnalogInputDescription("ADC Sensor");
-  zbSocSensor.setAnalogInputResolution(0.1);
-  zbSocSensor.setAnalogInputMinMax(0.0, 100.0);
-
-  // Endpoints registrieren
-  Zigbee.addEndpoint(&zbTempSensor);
-  Zigbee.addEndpoint(&zbSocSensor);
+  initInternalTempSensor();           // Initialize internal temperature reading of the ESP32C6
+  initAnalogSensor();                 // Initialize analog reading for the Liion battery voltage for SoC calculation
+  initDallas();
 
   Serial.println("Starting Zigbee...");
   // When all EPs are registered, start Zigbee in End Device mode
@@ -89,17 +136,13 @@ void setup() {
 
   // Start Temperature sensor reading task
   //xTaskCreate(temp_sensor_value_update, "temp_sensor_update", 2048, NULL, 10, NULL);
-  //temp_sensor_value_update();
-  //soc_sensor_value_update();
-  // Set reporting interval for temperature measurement in seconds, must be called after Zigbee.begin()
-  // min_interval and max_interval in seconds, delta (temp change in 0,1 °C)
-  // if min = 1 and max = 0, reporting is sent only when temperature changes by delta
-  // if min = 0 and max = 10, reporting is sent every 10 seconds or temperature changes by delta
-  // if min = 0, max = 10 and delta = 0, reporting is sent every 10 seconds regardless of temperature change
+  internal_temp_sensor_value_update();
+  soc_sensor_value_update();
+  dallas_temp_sensor_value_update();
 
-  //esp_zb_sleep_enable(true);
-  //esp_zb_sleep_set_threshold(3000);
-  //esp_sleep_enable_timer_wakeup(10ULL * 1000000ULL);
+  esp_zb_sleep_enable(true);
+  esp_zb_sleep_set_threshold(3000);
+  esp_sleep_enable_timer_wakeup(10ULL * 1000000ULL);
   //Serial.println("Stopping Zigbee");
   //delay(200);
   //Serial.println("Entering Deep Sleep");
@@ -109,11 +152,11 @@ void setup() {
 
 void loop() {
   // Checking button for factory reset
-  if (digitalRead(button) == LOW) {  // Push button pressed
+  if (digitalRead(BOOT_PIN) == LOW) {  // Push button pressed
     // Key debounce handling
     delay(100);
     int startTime = millis();
-    while (digitalRead(button) == LOW) {
+    while (digitalRead(BOOT_PIN) == LOW) {
       delay(50);
       if ((millis() - startTime) > 3000) {
         // If key pressed for more than 3secs, factory reset Zigbee and reboot
@@ -122,9 +165,9 @@ void loop() {
         Zigbee.factoryReset();
       }
     }
-    zbTempSensor.reportTemperature();
   }
-  temp_sensor_value_update();
-  soc_sensor_value_update();
   delay(1000);
+  internal_temp_sensor_value_update();
+  soc_sensor_value_update();
+  dallas_temp_sensor_value_update();
 }
