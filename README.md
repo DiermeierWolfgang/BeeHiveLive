@@ -323,27 +323,27 @@ Overall I sat there in the kitchen until the sun went down and I learned the fol
 1. Since some version (I forgot the exact one) ESP Home builds the code with containers
 2. Home Assistant doesn't allow me to access these containers via SSH
 
-What was my last option? Connect a monitor to my raspberry pi which runs my home assistant server. This was not an option, since the only avaliable monitor was the TV my parents used at the time. Again I had to find an alternative solution...
+What was my last option? Connect a monitor to my raspberry pi which runs my home assistant server. However, since the only avaliable monitor was the TV my parents wanted to use, I was stuck. Again I had to find an alternative solution...
 
 > [!Note]
 > I really don't know what I was tying to achieve anyways. Getting the environment form the server didn't even mean I would be able to do something actually usefull with it.
 
-Believe it or not but I am actually lazy. If I have the possibility to automate a 5 second task, I will gladly put 2 weeks of development in some sort of McGyver automation.
-Still there is a limit for me of how much time I want to waste, when there are easier ways.
-I started up youtube and typed "ESP-IDF Zigbee" in the search bar and realisied, that noone used the VS code ESP-IDF extension. Everyone was just using the Arduino IDE.
+Believe it or not but I am actually extremely lazy. If I have the possibility to automate a 5 second task, I will gladly put 2 weeks of effort in some sort of McGyver automation to handle that task for me.
+Still there is a limit of how much time I want to waste and I am starting to reach that limit.
+I started up youtube and typed "ESP-IDF Zigbee" in the search bar to check if there was a tutorial to finally guide me properly to my goal but realisied, that noone used the VS code ESP-IDF extension. Everyone was just using the Arduino IDE.
 
 This ment I finally came back to my senses and started developing on the most reasonable approach: ESP32C6 + Arduino IDE
 
 #### Arduino IDE might not be that bad after all
 The statement "most reasonable approach" did not mean, that I would immediately write 1000 lines of code and just flash them without any other obstructions in my way.
 On a positive note I was able to flash the Zigbee_Temperature_Sensor example immediately.
-So far so good, it also showed up in Home Assistant and even reported temperature reading of the internal sensor. (Time to reward myself with another cup of coffee)
+So far so good, it also showed up in Home Assistant and even reported a temperature reading of the internal sensor. (Time to reward myself with another cup of coffee)
 
 However when I frankensteined the Zigbee_Temperature_Sensor and the Zigbee_Analog_Input_Output together, the device did not connect and I recieved loads of Zigbee Stack faults on the serial monitor.
 Nothing I tried to change in the C-code seemed to work, exept removing the _zbAnalogSensor.reportTemperature()_ function call.
 There is a limited amount of faults I can handle per day so I went to bed and woke up the next day to the sound of an impact drill in the ceiling below me.
 
-After a healthy amount of sleep I remembered one of the youtube tutorials. The creator said to always erase the flash before reprogramming.
+After a healthy amount of sleep I remembered one of the youtube tutorials. The creator said to always erase the flash before re-programming.
 > [!Important]
 > Tools -> Erase All Flash Before Sketch Upload -> Enabled
 
@@ -375,12 +375,45 @@ As a next step I included the DS18B20 sensors I had still at home. I tried using
 > [!Note]
 > Using the newest version of a microcontroller can be quite challenging if you lack experience like me.
 
-At least there is a One Wire library that is compatible and with [some code I stole from this forum](https://forum.seeedstudio.com/t/xiao-esp32c6-and-the-ds18b20/293778/10) I was able to finally transmit my first external temperature reading from the ESP32C6 to Home Assitant!
+At least there is a 1-Wire library that is compatible and with [some code I stole from this forum](https://forum.seeedstudio.com/t/xiao-esp32c6-and-the-ds18b20/293778/10) I was able to finally transmit my first external temperature reading from the ESP32C6 to Home Assitant!
 
 The downside is, it works as long as there is only one sensor connected, but I threw a little party by myself in the room anyways.
 
 <p align="center">
   <img width="366" height="315" alt="image" src="https://github.com/user-attachments/assets/8ababb56-84fd-47c7-bb09-aea204044e6e" />
+</p>
+
+#### We need more sensors!
+It was in the middle of the night and time to add two additional temperature sensors on the same 1-Wire Bus. I checked the [Official Arduino 1-Wire Documentation](https://docs.arduino.cc/learn/communication/one-wire/#addressing-a-1-wire-device) and added some code to read out the addresses of my sensors. I have overall 5 sensors and I already know the address of three of them:
+```
+0x8003213198B06C28
+0xAB0321319EFABA28
+0xEA0321319CC4C128
+```
+
+So it was also possible to verify the code in the same go since I should see at least one of these addresses. Absolutely awesome!
+I used the serial monitor to show their addresses and connected my three sensors individually. Not to much trouble and I saw one familiar address:
+
+<p align="center">
+<img width="521" height="339" alt="image" src="https://github.com/user-attachments/assets/f0295c8b-de60-40ea-8427-e586a51e5394" />
+</p>
+
+> [!Note]
+> What now follows shows quite clearly, why sleep and brakes are important (especially coffee brakes)!
+
+Seeing the address shown from least significant byte to most significant in my serial monitor was triggering to me and annoyed me so I did a quick fix in my code. Nothing special, just one changed line:
+```
+old: for(int i = 0; i < 8; i++)
+new: for(int i = 8; i >= 0; i++)
+
+correct: for(int i = 7; i >= 0; i--)
+```
+
+The ESP32C6 did not like this one bit and crashed on me over and over again. It is quite embarrasing how long it took me to find this bug, since I thought I caused timing issues due to my excessive use of _serial.print()_.
+How did I come to this conclusion? Because the code didn't crash when I commented out my serial communication calls (which included the for loop).
+
+<p align="center">
+<img width="640" height="360" alt="image" src="https://github.com/user-attachments/assets/a1381e57-75f5-40b7-ab3f-380beecad223" />
 </p>
 
 ## Hardware Development
