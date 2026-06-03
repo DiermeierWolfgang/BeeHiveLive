@@ -22,6 +22,7 @@
 #define DS18B20_TEMP_SENSOR_1_ENDPOINT_NUMBER 3
 #define DS18B20_TEMP_SENSOR_2_ENDPOINT_NUMBER 4
 #define DS18B20_TEMP_SENSOR_3_ENDPOINT_NUMBER 5
+#define HX711_SENSOR_ENDPOINT_NUMBER          6
 
 // 1-Wire definitions
 #define ONEWIRE_CMD_MATCH_ROM     0x55
@@ -54,13 +55,14 @@ ZigbeeTempSensor zbDS18B20TempSensor[DS18B20_AMOUNT] = {
   ZigbeeTempSensor(DS18B20_TEMP_SENSOR_2_ENDPOINT_NUMBER),
   ZigbeeTempSensor(DS18B20_TEMP_SENSOR_3_ENDPOINT_NUMBER)
 };
+ZigbeeAnalog zbHX711Sensor = ZigbeeAnalog(HX711_SENSOR_ENDPOINT_NUMBER);
 
 OneWireNg_CurrentPlatform oneWire(ONE_WIRE_BUS, true);
 HX711 hx711;
 
 
 void initInternalTempSensor() {
-  zbInternalTempSensor.setManufacturerAndModel("Wolfgang Diermeier", "Internal Temperature");              // Set Zigbee device name and model
+  zbInternalTempSensor.setManufacturerAndModel("Wolfgang Diermeier", "BeeHiveLive");              // Set Zigbee device name and model
   zbInternalTempSensor.setMinMaxValue(10, 50);                                                    // Set minimum and maximum temperature measurement value (10-50°C is default range for chip temperature measurement)
   zbInternalTempSensor.setDefaultValue(10.0);                                                     // Optional: Set default (initial) value for the temperature sensor to 10.0°C to match the minimum temperature measurement value
   Zigbee.addEndpoint(&zbInternalTempSensor);                                                      // Register end point
@@ -68,11 +70,9 @@ void initInternalTempSensor() {
 
 void initAnalogSensor() {
   pinMode(BATTERY_VOLTAGE_PIN, INPUT);                                                            // Configure Pin as input
-  zbSocSensor.setManufacturerAndModel("Wolfgang Diermeier", "BeeHiveLive");
-  zbSocSensor.setAnalogInputDescription("Battery SoC");
   zbSocSensor.addAnalogInput();                                                                   // Adding analog input
+  zbSocSensor.setAnalogInputDescription("Battery SoC");
   zbSocSensor.setAnalogInputApplication(ESP_ZB_ZCL_AI_PERCENTAGE_OTHER);                          // Define senor reading as percentage value
-  zbSocSensor.setAnalogInputDescription("ADC Sensor");                                            // 
   zbSocSensor.setAnalogInputResolution(0.1);
   zbSocSensor.setAnalogInputMinMax(0.0, 100.0);
   Zigbee.addEndpoint(&zbSocSensor);
@@ -80,7 +80,6 @@ void initAnalogSensor() {
 
 void initDS18B20() {
   for (int i = 0; i < DS18B20_AMOUNT; i++) {
-    zbDS18B20TempSensor[i].setManufacturerAndModel("Wolfgang Diermeier", DS18B20_NAME[i]);
     // Set minimum and maximum temperature measurement value
     zbDS18B20TempSensor[i].setMinMaxValue(-40, 85);
     // Optional: Set default (initial) value for the temperature sensor to 20.0°C
@@ -92,6 +91,13 @@ void initDS18B20() {
 
 void initHX711() {
   hx711.begin(HX711_DOUT, HX711_SCK);
+  pinMode(BATTERY_VOLTAGE_PIN, INPUT);                                                            // Configure Pin as input
+  zbHX711Sensor.addAnalogInput();                                                                   // Adding analog input
+  zbHX711Sensor.setAnalogInputDescription("Weight");
+  zbHX711Sensor.setAnalogInputApplication(ESP_ZB_ZCL_AI_COUNT_UNITLESS_OTHER);                          // Define senor reading as percentage value
+  zbHX711Sensor.setAnalogInputResolution(0.01);
+  zbHX711Sensor.setAnalogInputMinMax(0, 300);
+  Zigbee.addEndpoint(&zbHX711Sensor);
 }
 
 
@@ -184,6 +190,17 @@ void DS18B20_temp_sensor_value_update() {
   }
 }
 
+void hx711_sensor_value_update() {
+  float weight = hx711.get_units(10);
+
+  Serial.printf("HX711 reading: %f", weight);
+  Serial.println();
+
+  zbHX711Sensor.setAnalogInput(weight);
+  zbHX711Sensor.reportAnalogInput();
+}
+
+
 /********************* Arduino functions **************************/
 void setup() {
   Serial.begin(115200);
@@ -218,6 +235,7 @@ void setup() {
   internal_temp_sensor_value_update();
   soc_sensor_value_update();
   DS18B20_temp_sensor_value_update();
+  hx711_sensor_value_update();
 
   esp_zb_sleep_enable(true);
   esp_zb_sleep_set_threshold(3000);
@@ -249,4 +267,5 @@ void loop() {
   internal_temp_sensor_value_update();
   soc_sensor_value_update();
   DS18B20_temp_sensor_value_update();
+  hx711_sensor_value_update();
 }
