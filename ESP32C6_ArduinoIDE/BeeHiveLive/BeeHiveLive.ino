@@ -9,19 +9,44 @@
 
 // Input/Output definition
 #define BATTERY_VOLTAGE_PIN A2
-#define ONE_WIRE_BUS D4
+#define ONE_WIRE_BUS        D4
 
 // Zigbee endpoint sensor configuration
-#define INTERNAL_TEMP_SENSOR_ENDPOINT_NUMBER 1
-#define SOC_SENSOR_ENDPOINT_NUMBER 2
-#define DALLAS_TEMP_SENSOR_ENDPOINT_NUMBER 3
+#define INTERNAL_TEMP_SENSOR_ENDPOINT_NUMBER  1
+#define SOC_SENSOR_ENDPOINT_NUMBER            2
+#define DALLAS_TEMP_SENSOR_ENDPOINT_NUMBER    3
+
+// 1-Wire definitions
+#define ONEWIRE_CMD_MATCH_ROM     0x55
+#define ONEWIRE_CMD_SKIP_ROM      0xCC
+#define DS18B20_FAMILY_CODE       0x28
+#define DS18B20_CMD_CONVERT_T     0x44
+#define DS18B20_CMD_READ_SCRATCH  0xBE
+#define DS18B20_SCRATCHPAD_SIZE   9
+#define DS18B20_CONVERT_MS        750
+
+// Known DS18B20 addresses (0x28 at the end represents device family code)
+static const OneWireNg::Id DS18B20[] = {
+  { 0x28, 0xC1, 0xC4, 0x9C, 0x31, 0x21, 0x03, 0xEA },
+  { 0x28, 0xA8, 0x6A, 0xD0, 0x63, 0x20, 0x01, 0x90 },
+  { 0x28, 0x6D, 0xE1, 0xC2, 0x63, 0x20, 0x01, 0x60 }
+};
+
+static const int DS18B20_AMOUNT = sizeof(DS18B20) / sizeof(DS18B20[0]);
+
+static const char* DS18B20_NAMES[] = {
+    "BeeHive_1",
+    "BeeHive_2",
+    "BeeHive_3",
+};
 
 ZigbeeTempSensor zbInternalTempSensor = ZigbeeTempSensor(INTERNAL_TEMP_SENSOR_ENDPOINT_NUMBER);
 ZigbeeAnalog zbSocSensor = ZigbeeAnalog(SOC_SENSOR_ENDPOINT_NUMBER);
 ZigbeeTempSensor zbDallasTempSensor = ZigbeeTempSensor(DALLAS_TEMP_SENSOR_ENDPOINT_NUMBER);
 
 OneWireNg_CurrentPlatform oneWire(ONE_WIRE_BUS, true);
-//DallasTemperature dallasSensors(&oneWire);
+
+
 
 void initInternalTempSensor() {
   zbInternalTempSensor.setManufacturerAndModel("Wolfgang Diermeier", "BeeHiveLive");              // Set Zigbee device name and model
@@ -46,15 +71,18 @@ void initDallas() {
   Zigbee.addEndpoint(&zbDallasTempSensor);                                                     // Register end point
 }
 
-/************************ Temp sensor *****************************/
+
+
+// Internal Temperature Sensor
 void internal_temp_sensor_value_update() {
   float tsens_value = temperatureRead();
-  Serial.printf("Updated internal temperature sensor value to %.2f°C\r\n", tsens_value);
+  Serial.printf("Internal → %.4f °C", tsens_value);
+  Serial.println();
   zbInternalTempSensor.setTemperature(tsens_value);
   zbInternalTempSensor.reportTemperature();
 }
 
-/************************ Battery SoC sensor *****************************/
+// Battery SoC Sensor
 void soc_sensor_value_update() {
   int   adc_value = analogRead(BATTERY_VOLTAGE_PIN);
   
@@ -62,59 +90,73 @@ void soc_sensor_value_update() {
   float soc = (voltage - 3.0f) * (100.0f / (4.2f - 3.0f));              // Li-Ion 3.0–4.2V → SoC 0–100%
   soc = constrain(soc, 0.0f, 100.0f);
 
-  Serial.printf("Battery ADC=%d Voltage=%.2fV SoC=%.1f%%\r\n",
-                adc_value, voltage, soc);
+  Serial.printf("Battery ADC=%d Voltage=%.2fV SoC=%.1f%%\r", adc_value, voltage, soc);
+  Serial.println();
 
   zbSocSensor.setAnalogInput(soc);
   zbSocSensor.reportAnalogInput();
 }
 
-float readOneWireTemp() {
+// Temporary function to read the address of one single connected one wire device
+void discoverOneWire() {
   uint8_t oneWireAddr[8];
-  uint8_t rawOneWiredata[9];
-
-  for (int i = 0; i < 3; i++) {
-    oneWire.searchReset();
-    if (!oneWire.search(oneWireAddr)) {
-      Serial.print("No more addresses.\n");
-    }
-    
-    oneWire.reset();
-    oneWire.writeByte(0xCC);
-    oneWire.writeByte(0x44);
-    delay(800);
-    oneWire.reset();
-    oneWire.writeByte(0xCC);
-    oneWire.writeByte(0xBE);
-    for (int i = 0; i < 9; i++) {
-      rawOneWiredata[i] = oneWire.readByte();
-    }
-    uint8_t crc = oneWire.crc8(rawOneWiredata, 8);
-
-    Serial.printf("One Wire Addr: ");
-    for(int i = 7; i >= 0; i--) {
-      Serial.printf("%x ", oneWireAddr[i]);
-    }
-    Serial.printf("\nOne Wire Data: ");
-    for (int i = 8; i >= 0; i--) {
-      Serial.printf("%x ", rawOneWiredata[i]);
-    }
-    Serial.println();
-    if (crc == rawOneWiredata[8]){
-      uint16_t result = (rawOneWiredata[1] << 8) | rawOneWiredata[0];
-      return result / 16.0;
-    } else {
-      Serial.println("CRC fail\n");
-    }
+  oneWire.searchReset();
+  if (!oneWire.search(oneWireAddr)) {
+    Serial.println("No more addresses.");
   }
-  return NAN;
+
+  // Print 1-Wire Addresses on the serial monitor
+  Serial.printf("1-Wire Addr: ");
+  for(int i = 7; i >= 0; i--) {
+    Serial.printf("%x ", oneWireAddr[i]);
+  }
+  Serial.println();
+}
+
+bool read_sensor(int index, float *temp_out)
+{
+    if (oneWire.addressSingle(DS18B20[index]) != OneWireNg::EC_SUCCESS)
+        return false;
+
+    oneWire.writeByte(DS18B20_CMD_READ_SCRATCH);
+
+    uint8_t sp[9];
+    oneWire.readBytes(sp, 9);
+
+    if (OneWireNg::crc8(sp, 8) != sp[8])
+        return false;
+
+    int16_t raw = (int16_t)((sp[1] << 8) | sp[0]);
+    *temp_out = raw / 16.0f;
+    return true;
+}
+
+void readAllOneWireTemps(float *tsens_value) {
+  //discoverOneWire();
+  for (int i = 0; i < 3; i++) {                               // Try three times in case of any fault
+    if (oneWire.addressAll() == OneWireNg::EC_SUCCESS) {      // Trigger broadcast convertion off all connected DS18B20 sensors
+      oneWire.writeByte(DS18B20_CMD_CONVERT_T);
+      delay(DS18B20_CONVERT_MS);
+      for (int j = 0; j < DS18B20_AMOUNT; j++) {
+        float temp;
+        if (read_sensor(j, &temp)) {
+            printf("%-10s → %.4f °C\n", DS18B20_NAMES[j], temp);
+            tsens_value[j] = temp;
+        } else {
+            printf("%-10s → READ FAILED\n", DS18B20_NAMES[j]);
+        }
+      }
+      break;
+    }
+    delay(100);                                               // Wait before retry
+  }
 }
 
 void dallas_temp_sensor_value_update() {
-  float tsens_value = readOneWireTemp();
-  Serial.printf("Updated external temperature sensor value to %.2f°C\r\n", tsens_value);
+  float tsens_value[3];
+  readAllOneWireTemps(tsens_value);
   
-  zbDallasTempSensor.setTemperature(tsens_value);
+  zbDallasTempSensor.setTemperature(tsens_value[0]);
   zbDallasTempSensor.reportTemperature();
 }
 
