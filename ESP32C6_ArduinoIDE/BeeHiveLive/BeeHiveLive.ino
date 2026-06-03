@@ -5,16 +5,23 @@
 // Add required libraries
 #include <Arduino.h>
 #include <OneWireNg_CurrentPlatform.h>
+#include <HX711.h>
 #include <Zigbee.h>
 
 // Input/Output definition
 #define BATTERY_VOLTAGE_PIN A2
-#define ONE_WIRE_BUS        D4
+#define I2C_CLK             D5
+#define I2C_DATA            D4
+#define ONE_WIRE_BUS        I2C_DATA
+#define HX711_SCK           D0
+#define HX711_DOUT          D1
 
 // Zigbee endpoint sensor configuration
 #define INTERNAL_TEMP_SENSOR_ENDPOINT_NUMBER  1
 #define SOC_SENSOR_ENDPOINT_NUMBER            2
-#define DALLAS_TEMP_SENSOR_ENDPOINT_NUMBER    3
+#define DS18B20_TEMP_SENSOR_1_ENDPOINT_NUMBER 3
+#define DS18B20_TEMP_SENSOR_2_ENDPOINT_NUMBER 4
+#define DS18B20_TEMP_SENSOR_3_ENDPOINT_NUMBER 5
 
 // 1-Wire definitions
 #define ONEWIRE_CMD_MATCH_ROM     0x55
@@ -34,7 +41,7 @@ static const OneWireNg::Id DS18B20[] = {
 
 static const int DS18B20_AMOUNT = sizeof(DS18B20) / sizeof(DS18B20[0]);
 
-static const char* DS18B20_NAMES[] = {
+static const char* DS18B20_NAME[] = {
     "BeeHive_1",
     "BeeHive_2",
     "BeeHive_3",
@@ -42,14 +49,18 @@ static const char* DS18B20_NAMES[] = {
 
 ZigbeeTempSensor zbInternalTempSensor = ZigbeeTempSensor(INTERNAL_TEMP_SENSOR_ENDPOINT_NUMBER);
 ZigbeeAnalog zbSocSensor = ZigbeeAnalog(SOC_SENSOR_ENDPOINT_NUMBER);
-ZigbeeTempSensor zbDallasTempSensor = ZigbeeTempSensor(DALLAS_TEMP_SENSOR_ENDPOINT_NUMBER);
+ZigbeeTempSensor zbDS18B20TempSensor[DS18B20_AMOUNT] = {
+  ZigbeeTempSensor(DS18B20_TEMP_SENSOR_1_ENDPOINT_NUMBER),
+  ZigbeeTempSensor(DS18B20_TEMP_SENSOR_2_ENDPOINT_NUMBER),
+  ZigbeeTempSensor(DS18B20_TEMP_SENSOR_3_ENDPOINT_NUMBER)
+};
 
 OneWireNg_CurrentPlatform oneWire(ONE_WIRE_BUS, true);
-
+HX711 hx711;
 
 
 void initInternalTempSensor() {
-  zbInternalTempSensor.setManufacturerAndModel("Wolfgang Diermeier", "BeeHiveLive");              // Set Zigbee device name and model
+  zbInternalTempSensor.setManufacturerAndModel("Wolfgang Diermeier", "Internal Temperature");              // Set Zigbee device name and model
   zbInternalTempSensor.setMinMaxValue(10, 50);                                                    // Set minimum and maximum temperature measurement value (10-50°C is default range for chip temperature measurement)
   zbInternalTempSensor.setDefaultValue(10.0);                                                     // Optional: Set default (initial) value for the temperature sensor to 10.0°C to match the minimum temperature measurement value
   Zigbee.addEndpoint(&zbInternalTempSensor);                                                      // Register end point
@@ -57,6 +68,8 @@ void initInternalTempSensor() {
 
 void initAnalogSensor() {
   pinMode(BATTERY_VOLTAGE_PIN, INPUT);                                                            // Configure Pin as input
+  zbSocSensor.setManufacturerAndModel("Wolfgang Diermeier", "BeeHiveLive");
+  zbSocSensor.setAnalogInputDescription("Battery SoC");
   zbSocSensor.addAnalogInput();                                                                   // Adding analog input
   zbSocSensor.setAnalogInputApplication(ESP_ZB_ZCL_AI_PERCENTAGE_OTHER);                          // Define senor reading as percentage value
   zbSocSensor.setAnalogInputDescription("ADC Sensor");                                            // 
@@ -65,12 +78,21 @@ void initAnalogSensor() {
   Zigbee.addEndpoint(&zbSocSensor);
 }
 
-void initDallas() {
-  zbDallasTempSensor.setMinMaxValue(-40, 85);                                                   // Set minimum and maximum temperature measurement value
-  zbDallasTempSensor.setDefaultValue(20.0);                                                     // Optional: Set default (initial) value for the temperature sensor to 20.0°C
-  Zigbee.addEndpoint(&zbDallasTempSensor);                                                     // Register end point
+void initDS18B20() {
+  for (int i = 0; i < DS18B20_AMOUNT; i++) {
+    zbDS18B20TempSensor[i].setManufacturerAndModel("Wolfgang Diermeier", DS18B20_NAME[i]);
+    // Set minimum and maximum temperature measurement value
+    zbDS18B20TempSensor[i].setMinMaxValue(-40, 85);
+    // Optional: Set default (initial) value for the temperature sensor to 20.0°C
+    zbDS18B20TempSensor[i].setDefaultValue(20.0);
+    // Register end points
+    Zigbee.addEndpoint(&zbDS18B20TempSensor[i]);
+  }
 }
 
+void initHX711() {
+  hx711.begin(HX711_DOUT, HX711_SCK);
+}
 
 
 // Internal Temperature Sensor
@@ -113,7 +135,7 @@ void discoverOneWire() {
   Serial.println();
 }
 
-bool read_sensor(int index, float *temp_out)
+bool readSingleOneWireTemp(int index, float *temp_out)
 {
     if (oneWire.addressSingle(DS18B20[index]) != OneWireNg::EC_SUCCESS)
         return false;
@@ -139,11 +161,11 @@ void readAllOneWireTemps(float *tsens_value) {
       delay(DS18B20_CONVERT_MS);
       for (int j = 0; j < DS18B20_AMOUNT; j++) {
         float temp;
-        if (read_sensor(j, &temp)) {
-            printf("%-10s → %.4f °C\n", DS18B20_NAMES[j], temp);
+        if (readSingleOneWireTemp(j, &temp)) {
+            printf("%-10s → %.4f °C\n", DS18B20_NAME[j], temp);
             tsens_value[j] = temp;
         } else {
-            printf("%-10s → READ FAILED\n", DS18B20_NAMES[j]);
+            printf("%-10s → READ FAILED\n", DS18B20_NAME[j]);
         }
       }
       break;
@@ -152,12 +174,14 @@ void readAllOneWireTemps(float *tsens_value) {
   }
 }
 
-void dallas_temp_sensor_value_update() {
-  float tsens_value[3];
+void DS18B20_temp_sensor_value_update() {
+  float tsens_value[DS18B20_AMOUNT];
   readAllOneWireTemps(tsens_value);
   
-  zbDallasTempSensor.setTemperature(tsens_value[0]);
-  zbDallasTempSensor.reportTemperature();
+  for (int i = 0; i < DS18B20_AMOUNT; i++) {
+    zbDS18B20TempSensor[i].setTemperature(tsens_value[i]);
+    zbDS18B20TempSensor[i].reportTemperature();
+  }
 }
 
 /********************* Arduino functions **************************/
@@ -169,7 +193,8 @@ void setup() {
 
   initInternalTempSensor();           // Initialize internal temperature reading of the ESP32C6
   initAnalogSensor();                 // Initialize analog reading for the Liion battery voltage for SoC calculation
-  initDallas();
+  initDS18B20();                      // Initialize external DS18B20 temperature sensors
+  initHX711();                        // Initialize HX711 scale IC
 
   Serial.println("Starting Zigbee...");
   // When all EPs are registered, start Zigbee in End Device mode
@@ -192,7 +217,7 @@ void setup() {
   //xTaskCreate(temp_sensor_value_update, "temp_sensor_update", 2048, NULL, 10, NULL);
   internal_temp_sensor_value_update();
   soc_sensor_value_update();
-  dallas_temp_sensor_value_update();
+  DS18B20_temp_sensor_value_update();
 
   esp_zb_sleep_enable(true);
   esp_zb_sleep_set_threshold(3000);
@@ -223,5 +248,5 @@ void loop() {
   delay(10000);
   internal_temp_sensor_value_update();
   soc_sensor_value_update();
-  dallas_temp_sensor_value_update();
+  DS18B20_temp_sensor_value_update();
 }
