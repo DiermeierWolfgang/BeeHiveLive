@@ -18,11 +18,11 @@
 
 // Zigbee endpoint sensor configuration
 #define INTERNAL_TEMP_SENSOR_ENDPOINT_NUMBER  1
-#define SOC_SENSOR_ENDPOINT_NUMBER            2
-#define DS18B20_TEMP_SENSOR_1_ENDPOINT_NUMBER 3
-#define DS18B20_TEMP_SENSOR_2_ENDPOINT_NUMBER 4
-#define DS18B20_TEMP_SENSOR_3_ENDPOINT_NUMBER 5
-#define HX711_SENSOR_ENDPOINT_NUMBER          6
+#define DS18B20_TEMP_SENSOR_1_ENDPOINT_NUMBER 2
+#define DS18B20_TEMP_SENSOR_2_ENDPOINT_NUMBER 3
+#define DS18B20_TEMP_SENSOR_3_ENDPOINT_NUMBER 4
+#define HX711_SENSOR_ENDPOINT_NUMBER          5
+//#define SOC_SENSOR_ENDPOINT_NUMBER            6
 
 // 1-Wire definitions
 #define ONEWIRE_CMD_MATCH_ROM     0x55
@@ -49,7 +49,7 @@ static const char* DS18B20_NAME[] = {
 };
 
 ZigbeeTempSensor zbInternalTempSensor = ZigbeeTempSensor(INTERNAL_TEMP_SENSOR_ENDPOINT_NUMBER);
-ZigbeeAnalog zbSocSensor = ZigbeeAnalog(SOC_SENSOR_ENDPOINT_NUMBER);
+//ZigbeeAnalog zbSocSensor = ZigbeeAnalog(SOC_SENSOR_ENDPOINT_NUMBER);
 ZigbeeTempSensor zbDS18B20TempSensor[DS18B20_AMOUNT] = {
   ZigbeeTempSensor(DS18B20_TEMP_SENSOR_1_ENDPOINT_NUMBER),
   ZigbeeTempSensor(DS18B20_TEMP_SENSOR_2_ENDPOINT_NUMBER),
@@ -63,6 +63,7 @@ HX711 hx711;
 
 void initInternalTempSensor() {
   zbInternalTempSensor.setManufacturerAndModel("Wolfgang Diermeier", "BeeHiveLive");              // Set Zigbee device name and model
+  zbInternalTempSensor.setPowerSource(ZB_POWER_SOURCE_BATTERY);
   zbInternalTempSensor.setMinMaxValue(10, 50);                                                    // Set minimum and maximum temperature measurement value (10-50°C is default range for chip temperature measurement)
   zbInternalTempSensor.setDefaultValue(10.0);                                                     // Optional: Set default (initial) value for the temperature sensor to 10.0°C to match the minimum temperature measurement value
   Zigbee.addEndpoint(&zbInternalTempSensor);                                                      // Register end point
@@ -70,16 +71,18 @@ void initInternalTempSensor() {
 
 void initAnalogSensor() {
   pinMode(BATTERY_VOLTAGE_PIN, INPUT);                                                            // Configure Pin as input
+  /* ------------- Outdated -----------------
   zbSocSensor.addAnalogInput();                                                                   // Adding analog input
   zbSocSensor.setAnalogInputDescription("Battery SoC");
   zbSocSensor.setAnalogInputApplication(ESP_ZB_ZCL_AI_PERCENTAGE_OTHER);                          // Define senor reading as percentage value
   zbSocSensor.setAnalogInputResolution(0.1);
   zbSocSensor.setAnalogInputMinMax(0.0, 100.0);
-  Zigbee.addEndpoint(&zbSocSensor);
+  Zigbee.addEndpoint(&zbSocSensor); */
 }
 
 void initDS18B20() {
   for (int i = 0; i < DS18B20_AMOUNT; i++) {
+    zbDS18B20TempSensor[i].setManufacturerAndModel("Wolfgang Diermeier", DS18B20_NAME[i]);
     // Set minimum and maximum temperature measurement value
     zbDS18B20TempSensor[i].setMinMaxValue(-40, 85);
     // Optional: Set default (initial) value for the temperature sensor to 20.0°C
@@ -94,9 +97,8 @@ void initHX711() {
   pinMode(BATTERY_VOLTAGE_PIN, INPUT);                                                            // Configure Pin as input
   zbHX711Sensor.addAnalogInput();                                                                   // Adding analog input
   zbHX711Sensor.setAnalogInputDescription("Weight");
-  zbHX711Sensor.setAnalogInputApplication(ESP_ZB_ZCL_AI_COUNT_UNITLESS_OTHER);                          // Define senor reading as percentage value
-  zbHX711Sensor.setAnalogInputResolution(0.01);
-  zbHX711Sensor.setAnalogInputMinMax(0, 300);
+  zbHX711Sensor.setAnalogInputApplication(0xffffff);                          // Define senor reading as percentage value
+  zbHX711Sensor.setAnalogInputResolution(1);
   Zigbee.addEndpoint(&zbHX711Sensor);
 }
 
@@ -116,13 +118,18 @@ void soc_sensor_value_update() {
   
   float voltage   = (adc_value / 1023.0f) * 3.3f * 1.694915254237288;   // 1023: 10-bit adc / 3.3: max voltage / 1.69... voltage divider
   float soc = (voltage - 3.0f) * (100.0f / (4.2f - 3.0f));              // Li-Ion 3.0–4.2V → SoC 0–100%
-  soc = constrain(soc, 0.0f, 100.0f);
+  soc = constrain(soc, 0.0f, 100.0f);                                   // Limit from 0% to 100%
 
   Serial.printf("Battery ADC=%d Voltage=%.2fV SoC=%.1f%%\r", adc_value, voltage, soc);
   Serial.println();
 
-  zbSocSensor.setAnalogInput(soc);
-  zbSocSensor.reportAnalogInput();
+  //zbSocSensor.setAnalogInput(soc);
+  //zbSocSensor.reportAnalogInput();
+
+  // Battery information is placed into first endpoint
+  zbInternalTempSensor.setBatteryPercentage((uint8_t) soc);
+  //zbInternalTempSensor.setBatteryVoltage((uint8_t) voltage * 10);
+  zbInternalTempSensor.reportBatteryPercentage();
 }
 
 // Temporary function to read the address of one single connected one wire device
@@ -161,32 +168,32 @@ bool readSingleOneWireTemp(int index, float *temp_out)
 
 void readAllOneWireTemps(float *tsens_value) {
   //discoverOneWire();
-  for (int i = 0; i < 3; i++) {                               // Try three times in case of any fault
-    if (oneWire.addressAll() == OneWireNg::EC_SUCCESS) {      // Trigger broadcast convertion off all connected DS18B20 sensors
-      oneWire.writeByte(DS18B20_CMD_CONVERT_T);
+  for (int i = 0; i < 3; i++) {                                   // Try three times in case of any fault
+    if (oneWire.addressAll() == OneWireNg::EC_SUCCESS) {          // Trigger broadcast conversion off all connected DS18B20 sensors
+      oneWire.writeByte(DS18B20_CMD_CONVERT_T);                   
       delay(DS18B20_CONVERT_MS);
-      for (int j = 0; j < DS18B20_AMOUNT; j++) {
+      for (int j = 0; j < DS18B20_AMOUNT; j++) {                  // Loop through all known temperature sensor addresses
         float temp;
-        if (readSingleOneWireTemp(j, &temp)) {
-            printf("%-10s → %.4f °C\n", DS18B20_NAME[j], temp);
-            tsens_value[j] = temp;
+        if (readSingleOneWireTemp(j, &temp)) {                    // Read individual sensor
+            printf("%-10s → %.4f °C\n", DS18B20_NAME[j], temp);   // Print value on serial monitor if reading is valid
+            tsens_value[j] = temp;                                // Store value in correspondind index j for the sensor
         } else {
-            printf("%-10s → READ FAILED\n", DS18B20_NAME[j]);
+            printf("%-10s → READ FAILED\n", DS18B20_NAME[j]);     // Print failure on serial monitor
         }
       }
-      break;
+      break;                                                      // Leave for loop after successful broadcast conversion
     }
-    delay(100);                                               // Wait before retry
+    delay(100);                                                   // Wait before retry broadcast conversion
   }
 }
 
 void DS18B20_temp_sensor_value_update() {
-  float tsens_value[DS18B20_AMOUNT];
-  readAllOneWireTemps(tsens_value);
+  float tsens_value[DS18B20_AMOUNT];                              // Define float array for all temperature readings
+  readAllOneWireTemps(tsens_value);                               // Get temperature readings from one wire bus and store them in array
   
-  for (int i = 0; i < DS18B20_AMOUNT; i++) {
-    zbDS18B20TempSensor[i].setTemperature(tsens_value[i]);
-    zbDS18B20TempSensor[i].reportTemperature();
+  for (int i = 0; i < DS18B20_AMOUNT; i++) {                      // Loop through all known temperature sensor addresses
+    zbDS18B20TempSensor[i].setTemperature(tsens_value[i]);        // Set temperature in zigbee endpoint
+    zbDS18B20TempSensor[i].reportTemperature();                   // report temperature via zigbee
   }
 }
 
