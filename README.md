@@ -14,8 +14,8 @@ This respository describes a bee hive monitor that is integrated to Home Assista
 I planned to use a seeed studio brakeout board based microcontroller that features Zigbee connectivity.
 That enables me to connect the device to my already established Zigbee mesh.
 After a short search I stumbled upon two different options:
-1. Seeed Studio XIAO ESP32C6: https://wiki.seeedstudio.com/xiao_esp32c6_getting_started/
-2. Seeed Studio XIAO NRF52840: https://wiki.seeedstudio.com/XIAO_BLE/
+1. [Seeed Studio XIAO ESP32C6](https://wiki.seeedstudio.com/xiao_esp32c6_getting_started/)
+2. [Seeed Studio XIAO NRF52840](https://wiki.seeedstudio.com/XIAO_BLE/)
 
 After some googling "ESP32C6 vs NRF52840 current consumption" it turns out, that the NRF52840 is supposed to have a really low power comsumption, making it absolutely perfect for my application.
 Even something about compatibility with ESP Home and the Arduino IDE is written in the documentation, so I knew that I will have an easy time programming it (Foreshadowing can be quite obvious).
@@ -43,14 +43,17 @@ A real developer needs a dark mode and lines of text flying through a terminal a
 
 However since the Arduino IDE is aimed towards beginners like me I wanted to give it a try.
 Indeed there is a library avaliable to get started with my specific NRF52840 board. 
-So I added the board URL to my preferences and tried out example sketches.
-
+So I added the board URL to my preferences and tried out example sketches:
+````
+https://espressif.github.io/arduino-esp32/package_esp32_index.json
+https://files.seeedstudio.com/arduino/package_seeeduino_boards_index.json
+````
 <p align="center">
 <img width="696" height="464" alt="image" src="https://github.com/user-attachments/assets/d85e8646-102b-4b85-9245-276259d98ea5" />
 </p>
 
 > [!Important]
-> I am not going to paste the URL here, since this approach will not work anyways and I was running straight against a wall here. Unforfunately my past self didn't know this yet and spent 4 hours of debugging and looking through forums before finally giving up.
+> This approach will not work and I was running straight against a wall here. Unforfunately my past self didn't know this yet and spent 4 hours of debugging and looking through forums before finally giving up.
 
 It turns out that programming zigbee to the nrf52840 is not possible in the Arduino IDE. Again my copilot friend from microsoft told me this.
 Appearently since some version of the nRF Connect SDK, zigbee is not supported anymore for the nrf52840 chip.
@@ -209,7 +212,7 @@ So first of all I do not want my battery level to show up as normal entity in Ho
 <img width="368" height="305" alt="image" src="https://github.com/user-attachments/assets/73a4959d-c02c-44c2-a729-275edacc2001" />
 </p>
 
-And the second problem is, that I pull ~20mA from my 5V supply even without sensors attached. This causes also a lot of heat since 5V*20mA=100mW is a lot for such a small device.
+And the second problem is, that I pull ~20mA from my 5V supply even without sensors attached. This causes also a bit of heat since 5V*20mA=100mW are significant losses for such a small microchip. At least high enough that I was able to check if the ESP32C6 was powered on by feeling the temperature.
 
 The current draw also made me realize an oversight I have in my hardare design. I am powering all of my sensors from 3.3V at all times. Even if the microcontroller doesn't read any values. This will drain my battery quickly and sounds like a problem for my future self.
 
@@ -282,7 +285,13 @@ I tried connecting with my tower PC (which I've been using so far), my laptop an
 <img width="350" height="360" alt="image" src="https://github.com/user-attachments/assets/d98c2c16-3981-4e2c-aff3-60855ef263e4" />
 </p>
 
-So I got myself some coffee and on the way back to the PC I saw a yellow light on one of my wifi range extenders. Turns out the fuse to the router which connects all of my devices was turned off by an electrician doing some wiring in the apartment downstairs. Unfortunately for me, after some back and forth everyone came to the conclusion, that a delay in my project is less critical than a dead electrician. I really need to work on my negotiation skills. 
+So I got myself some coffee and on the way back to the PC I saw a yellow light on one of my wifi range extenders. Turns out the router which connects __all__ of my devices was "turned off" by an electrician doing some wiring in the apartment downstairs.
+
+<p align="center">
+<img width="500" height="375" alt="image" src="https://github.com/user-attachments/assets/6cfebaab-6dd6-45d2-907e-a9e958a54629" />
+</p>
+
+Unfortunately for me, after some back and forth everyone came to the conclusion, that a delay in my project is less critical than a dead electrician. I really need to work on my negotiation skills.
 
 I had no choice. I took my laptop, ESP32C6 and my phone so I could work remotely. The good thing was that I already pushed my latest progress to github. The bad thing: I still had to install all of the extensions to VS code again on my laptop. This also used up all of my data allowance.
 
@@ -404,7 +413,7 @@ I used the serial monitor to show their addresses and connected my three sensors
 <img width="521" height="339" alt="image" src="https://github.com/user-attachments/assets/f0295c8b-de60-40ea-8427-e586a51e5394" />
 </p>
 
-> [!Note]
+> [!Important]
 > What now follows shows quite clearly, why sleep and breakes are important (especially coffee breakes)!
 
 Seeing the address shown from least significant byte to most significant in my serial monitor was triggering to me and so I decided to implement a quick fix in my code. Nothing special, just one altered line:
@@ -424,7 +433,93 @@ How did I come to this conclusion? Because the code didn't crash when I commente
 <img width="640" height="360" alt="image" src="https://github.com/user-attachments/assets/a1381e57-75f5-40b7-ab3f-380beecad223" />
 </p>
 
+> [!Note}
+> If it is already 3am and you are still debugging: Just go to bed.
+
+#### Small steps to victory
+It was wednesday during my summer vacation and the third day where the electrician downstairs made sure, that I will wake up after only 4 hours of sleep. You might ask yourself why I am not just getting to bed earlier and continue debugging in the morning? I would like to dodge that question and get back to more important topics.
+
+I read through different forums and had conversations with Claude AI to learn a few things about 1-Wire. With that new knowledge I was able to connect all three temperature sensors at the same time and distinguish between them using their individual addresses. But there was once again a new challenge: Even after I implemented all of the three temperature readings as a different zigbee endpoint in my code and gave these individual endpoints they all showed up in Home Assistant just named "Temperature".
+
+<p align="center">
+<img width="160" height="104" alt="image" src="https://github.com/user-attachments/assets/ae595f62-1a83-4781-8c3f-09094f5970af" />
+</p>
+
+It was only possible to rename one of them by setting the model name of the first endpoint.
+However, the entity names inside Home Assistant are still unique so I can still distinguish between them.
+
+Also as a fun little sidenote. When I selected the analog cluster and selected an unitless count as an application _setAnalogInputApplication(ESP_ZB_ZCL_AI_COUNT_UNITLESS_OTHER)_ it was possible to change the name. So there seems to be some dependency on the application of the analog cluster. Thinking about it hurts my brain so I will just stop it.
+
+Due to of all the debugging I did in that regard I was able to find out the solution to another earlier problem. Inside the _ZigbeeEP.h_ header file I found the following functions:
+````
+// Set Power source and battery percentage for battery powered devices
+  bool setPowerSource(zb_power_source_t power_source, uint8_t percentage = 0xff, uint8_t voltage = 0xff);  // voltage in 100mV
+  bool setBatteryPercentage(uint8_t percentage);                                                           // 0-100 %
+  bool setBatteryVoltage(uint8_t voltage);                                                                 // voltage in 100mV (example value 35 for 3.5V)
+  bool reportBatteryPercentage();                                                                          // battery voltage is not reportable attribute
+````
+These funtions allow an integration of battery information into the power configuration cluster defined in the [Zigbee Cluster Library Specification](https://zigbeealliance.org/wp-content/uploads/2019/12/07-5123-06-zigbee-cluster-library-specification.pdf).
+
+Or in another words that even I was able to understand: Battery full or not go from ESP32 to here:
+
+<p align="center">
+<img width="369" height="305" alt="image" src="https://github.com/user-attachments/assets/75e42a18-5615-400f-b18d-4dbf21274445" />
+</p>
+
+The only success in human history comparable to this milestone was the [Apollo 11 Mission](https://en.wikipedia.org/wiki/Apollo_11).
+Apollo 11 cost around 355 Million US-Dollar taken inflation into account. I got my battery level reading into Home Assistant with just a fraction of the effort or cost. However, I believe I might have used the same amount of coffein.
+
+Regarding the HX711 weight sensor it was quite simple to get it into Home Assistant, since I was able to reuse some code of other sensors to define a new zigbee end device. After that it was only required to add 2-3 lines of code. Everything else is handeled in the background by the [HX711 library](https://github.com/bogde/HX711).
+
+There was one last problem left: The only suited zigbee cluster I had avaliable was the analog input cluster. This cluster however does not feature any weight application. The avaliable options are stored in the _esp_zigbee_zcl_analog_input.h_ header file.
+````
+/** @brief Values for Analog Input cluster applications type*/
+typedef enum {
+    ESP_ZB_ZCL_AI_APP_TYPE_TEMPERATURE,        /*!< Temperature */
+    ESP_ZB_ZCL_AI_APP_TYPE_HUMIDITY,           /*!< Humidity */
+    ESP_ZB_ZCL_AI_APP_TYPE_PRESSURE,           /*!< Pressure */
+    ESP_ZB_ZCL_AI_APP_TYPE_FLOW,               /*!< Flow */
+    ESP_ZB_ZCL_AI_APP_TYPE_PERCENTAGE,         /*!< Percentage */
+    ESP_ZB_ZCL_AI_APP_TYPE_PPM,                /*!< Ppm */
+    ESP_ZB_ZCL_AI_APP_TYPE_RPM,                /*!< Rpm */
+    ESP_ZB_ZCL_AI_APP_TYPE_CURRENT_IN_AMPS,    /*!< Current In AMPS */
+    ESP_ZB_ZCL_AI_APP_TYPE_FREQUENCY,          /*!< Frequency */
+    ESP_ZB_ZCL_AI_APP_TYPE_POWER_IN_WATTS,     /*!< Power In Watts */
+    ESP_ZB_ZCL_AI_APP_TYPE_POWER_IN_KILOWATTS, /*!< Power In Kilowatts */
+    ESP_ZB_ZCL_AI_APP_TYPE_ENERGY,             /*!< Energy */
+    ESP_ZB_ZCL_AI_APP_TYPE_COUNT_UNITLESS,     /*!< Count Unitless */
+    ESP_ZB_ZCL_AI_APP_TYPE_ENTHALPY,           /*!< Enthalpy */
+    ESP_ZB_ZCL_AI_APP_TYPE_TIME,               /*!< Time */
+    /* Types 0x0f to 0xfe are reserved */
+    ESP_ZB_ZCL_AI_APP_TYPE_OTHER = 0xff, /*!< Other */
+} esp_zb_zcl_ai_application_types_t;
+````
+
+> [!Note]
+> I do not know what the reasoning behind this is. Maybe there is simply no usecase for someone to transmit his weight from a scale in the bathroom directly to his smart home system through a low power smart device mesh. Eventhough the longer I think about it, the more interesting it seems.
+
+If there was no possibility to display weight in kg I wanted to at least remove the unit completely. I tried the following applications:
+
+| Application | Unit shown in HA |
+| ----------- | ---------------- |
+| ESP_ZB_ZCL_AI_APP_TYPE_OTHER | °C |
+| ESP_ZB_ZCL_AI_APP_TYPE_COUNT_UNITLESS | counts |
+
+As shown in the table the only two applications that seemed useful turned out to be useless. But then something happened. There was the perfect combination of low blood sugar, amount of coffein and lack of sleep in my system and then I saw this line of code in the header file:
+````
+#define ESP_ZB_ZCL_AI_SET_APP_TYPE_WITH_ID(_type, _id) (((_type & 0xff) << 16) | (_id & 0xffff))
+````
+<p align="center">
+<img width="400" height="400" alt="image" src="https://github.com/user-attachments/assets/9c5f8464-3881-4bb8-ac52-b1991369e27a" />
+</p>
+
+So I just entered 0xffffff instead of an application (this is different from _ESP_ZB_ZCL_AI_APP_TYPE_OTHER_ which corresponds to 0xff0000) and it worked perfectly. All temperatures and the raw weight reading from the HX711 were transmitted to Home Assistant via zigbee.
+
+It was time for another party!
+
+#### Final additions - Binary information of solar charger
+
 ## Hardware Development
 Yes I developed custom PCBs for the project.
 ## Testing
-Testing of the 
+
