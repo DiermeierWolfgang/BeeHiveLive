@@ -7,6 +7,7 @@ This respository describes a bee hive monitor that is integrated to Home Assista
 > Let's see where this will get us...
 
 ## Software Development
+> [!Note]
 > I have no idea how to programm so I basically just steal code and torture every AI known to man to get my code running.
 > It is the software equivalent of using Duck Tape in order to mount a jet engine to a Boeing 787-9 Dreamliner.
 
@@ -229,7 +230,7 @@ Anyways I had two options. Use the progress I made so far with ESP Home or find 
 | Binary Output | working              | unknown        |
 | Consumption   | Deepsleep avaliable  | unknown        |
 
-After I looked at this table for some time I just shrugged my shoulders, got a bottle of spezi and got to work.
+After I looked at this table for some time I just shrugged my shoulders, got another coffee and got to work.
 
 #### ESP-IDF - The worst rated VS Code plugin I've ever used
 > [!Important]
@@ -275,8 +276,8 @@ Again as always I was not able to find the device in Home Assistant. Even with t
 So I gave up and went to bed. When I laid down I already heard the first birds sing. Maybe it was just my imagination going wild due to the lack of sleep, but I swear these birds are mocking me.
 
 #### Why can I not connect to Home Assitant anymore?
-It was the third day of tinkering with the ESP32C6. I got up from bed, turned on the PC and wanted to check if actually Home Assitant was the root cause of the failed connection.
-I was quite sure that it is not, since I was able to connect before when flashing via ESP Home, but since claude and copilot told me this is the root cause, I wanted to check anyway.
+It was the third day of tinkering with the ESP32C6. I got up from bed, turned on the PC and wanted to check if maybe Home Assitant was the root cause of the failed connection.
+I was quite certain that it is not, since I was able to connect before when flashing via ESP Home, but since claude and copilot told me it is the root cause, I wanted to check anyway.
 
 When I tried loading up the main page of home assitant I was greeted with a loading screen. What was going on?
 I tried connecting with my tower PC (which I've been using so far), my laptop and my phone. Nothing..
@@ -291,9 +292,10 @@ So I got myself some coffee and on the way back to the PC I saw a yellow light o
 <img width="500" height="375" alt="image" src="https://github.com/user-attachments/assets/6cfebaab-6dd6-45d2-907e-a9e958a54629" />
 </p>
 
+As shown in the picture it was out of the question to reconnect it. Even if it was reconnected, it would require the outlets to be powered on again, which were under construction.
 Unfortunately for me, after some back and forth everyone came to the conclusion, that a delay in my project is less critical than a dead electrician. I really need to work on my negotiation skills.
 
-I had no choice. I took my laptop, ESP32C6 and my phone so I could work remotely. The good thing was that I already pushed my latest progress to github. The bad thing: I still had to install all of the extensions to VS code again on my laptop. This also used up all of my data allowance.
+I had no choice. I took my laptop, ESP32C6 and my phone so I could work remotely. The good thing was that I already pushed my latest progress to github. The bad thing: I still had to install all of the extensions to VS code again on my laptop. This also used up all of my phones data allowance.
 
 After 1 hour of installation I was able to flash the ESP32C6 with my laptop.
 
@@ -433,7 +435,7 @@ How did I come to this conclusion? Because the code didn't crash when I commente
 <img width="640" height="360" alt="image" src="https://github.com/user-attachments/assets/a1381e57-75f5-40b7-ab3f-380beecad223" />
 </p>
 
-> [!Note}
+> [!Note]
 > If it is already 3am and you are still debugging: Just go to bed.
 
 #### Small steps to victory
@@ -467,7 +469,7 @@ Or in another words that even I was able to understand: Battery full or not go f
 </p>
 
 The only success in human history comparable to this milestone was the [Apollo 11 Mission](https://en.wikipedia.org/wiki/Apollo_11).
-Apollo 11 cost around 355 Million US-Dollar taken inflation into account. I got my battery level reading into Home Assistant with just a fraction of the effort or cost. However, I believe I might have used the same amount of coffein.
+Apollo 11 cost around 355 Million US-Dollar taken inflation into account. I got my battery level reading into Home Assistant with just a fraction of the effort or cost. However, I believe I might have used the same amount of caffein.
 
 Regarding the HX711 weight sensor it was quite simple to get it into Home Assistant, since I was able to reuse some code of other sensors to define a new zigbee end device. After that it was only required to add 2-3 lines of code. Everything else is handeled in the background by the [HX711 library](https://github.com/bogde/HX711).
 
@@ -505,7 +507,7 @@ If there was no possibility to display weight in kg I wanted to at least remove 
 | ESP_ZB_ZCL_AI_APP_TYPE_OTHER | °C |
 | ESP_ZB_ZCL_AI_APP_TYPE_COUNT_UNITLESS | counts |
 
-As shown in the table the only two applications that seemed useful turned out to be useless. But then something happened. There was the perfect combination of low blood sugar, amount of coffein and lack of sleep in my system and then I saw this line of code in the header file:
+As shown in the table the only two applications that seemed useful turned out to be useless. But then something happened. There was the perfect combination of low blood sugar, amount of caffein and lack of sleep in my system and then I saw this line of code in the header file:
 ````
 #define ESP_ZB_ZCL_AI_SET_APP_TYPE_WITH_ID(_type, _id) (((_type & 0xff) << 16) | (_id & 0xffff))
 ````
