@@ -93,6 +93,7 @@ void initInternalTempSensor() {
 
 void initSOCSensor() {
   pinMode(BATTERY_VOLTAGE_PIN, INPUT);
+  analogReadResolution(12);
 }
 
 void initDS18B20() {
@@ -181,8 +182,8 @@ void internal_temp_sensor_value_update() {
 // Battery SoC Sensor
 void soc_sensor_value_update() {
   int adc_value = analogRead(BATTERY_VOLTAGE_PIN);
-  
-  float voltage   = (adc_value / 1023.0f) * 3.3f * 1.694915254237288;   // 1023: 10-bit adc / 3.3: max voltage / 1.69... voltage divider
+  // fac = ((1000+590)/1000) * (3.71/2.91) <- factor determined during testing
+  float voltage   = (adc_value / 4095.0f) * 3.3f * 2.027113402f;   // 1023: 10-bit adc / 3.3: max voltage / 2.027113402... voltage divider incl. inner gpio resistance
   float soc = (voltage - 3.0f) * (100.0f / (4.2f - 3.0f));              // Li-Ion 3.0–4.2V → SoC 0–100%
   soc = constrain(soc, 0.0f, 100.0f);                                   // Limit from 0% to 100%
 
@@ -270,7 +271,7 @@ void hx711_sensor_value_update() {
 
   if (hx711gain == 0) {
     // Use default values or from memory if gain is not valid
-    hx711gain = preferences.getFloat("hx711gain", 0.00004);
+    hx711gain = preferences.getFloat("hx711gain", 0.0000454545454545);
     hx711offset = preferences.getFloat("hx711offset", 1.647);
   } else {
     // Udate memory with new values
@@ -408,7 +409,7 @@ void loop() {
   DS18B20_temp_sensor_value_update();
   hx711_sensor_value_update();
   cn3791_status_update();
-  delay(2000);
+  //delay(2000);
   enterDeepSleep();
 
   // 10 sec delay in case no deep sleep is defined
