@@ -65,6 +65,12 @@ static const char* DS18B20_NAME[] = {
     "Temp3",
 };
 
+static const int TXPower[] = {
+  IEEE802154_TXPOWER_VALUE_MAX,
+  IEEE802154_TXPOWER_VALUE_MIN,
+  IEEE802154_TXPOWER_INDEX_MIN
+};
+
 
 ZigbeeTempSensor zbInternalTempSensor = ZigbeeTempSensor(INTERNAL_TEMP_SENSOR_ENDPOINT_NUMBER);
 ZigbeeTempSensor zbDS18B20TempSensor[DS18B20_AMOUNT] = {
@@ -180,7 +186,7 @@ void initDeepSleep() {
 
 void initZigbee() {
   // Increase transmission power of the ESP32C6
-  esp_zb_set_tx_power(IEEE802154_TXPOWER_VALUE_MAX);
+  esp_zb_set_tx_power(preferences.getInt("TXPower", IEEE802154_TXPOWER_VALUE_MAX));
   // Lock to channel 15 ONLY (Home Assistant coordinator channel)
   Zigbee.setPrimaryChannelMask(1 << ZIGBEE_CHANNEL);
   // Set long scan duration to help connection
@@ -400,6 +406,16 @@ void setup() {
     connectionDuration++;
     if (connectionDuration > 600) { // 60 second timeout
         Serial.println("Failed to rejoin, entering deep sleep");
+        // Trying a different TX strength on next startup
+        int lastTXPower = preferences.getInt("TXPower", IEEE802154_TXPOWER_INDEX_MIN);
+        for (int i = 0; i < ((sizeof(TXPower) / sizeof(TXPower[0])) - 1); i++) {
+          if (lastTXPower == TXPower[i]) {
+            preferences.putInt("TXPower", TXPower[i+1]);
+            break;
+          } else {
+            preferences.putInt("TXPower", TXPower[0]);
+          }
+        }
         enterDeepSleep(10, false);
     }
   }
