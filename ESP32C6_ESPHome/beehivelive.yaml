@@ -1,0 +1,138 @@
+esphome:
+  name: beehivelive
+  friendly_name: BeeHiveLive
+
+#nrf52:
+#  board: xiao_ble
+
+esp32:
+  board: seeed_xiao_esp32c6
+  framework:
+    type: esp-idf
+
+zigbee:
+  id: my_zigbee
+  router: false
+  power_source: BATTERY
+
+# Enable logging
+logger:
+  level: DEBUG
+
+one_wire:
+  - platform: gpio
+    pin:
+      number: D4
+      mode: INPUT
+
+#i2c:
+#  sda: P0.04
+#  scl: P0.05
+#  scan: true
+#  id: I2C_BUS
+
+sensor:
+#  - platform: sht4x
+#    temperature:
+#      name: "Temperature_1"
+#    humidity:
+#      name: "Humidity_1"
+
+  - platform: dallas_temp
+    address: 0xEA0321319CC4C128
+    name: "Temperature_1"
+    filters:
+      - filter_out: 85.000
+    
+  - platform: dallas_temp
+    address: 0x90012063D06AA828
+    name: "Temperature_2"
+    filters:
+      - filter_out: 85.000
+    
+  - platform: dallas_temp
+    address: 0x60012063C2E16D28
+    name: "Temperature_3"
+    filters:
+      - filter_out: 85.000
+    
+  - platform: hx711
+    name: "Weight_1"
+    dout_pin: D1 #P0.03
+    clk_pin: D0 #P0.02
+    gain: 128
+    accuracy_decimals: 5
+    filters:
+      - filter_out: 0
+      - median:
+          window_size: 3
+          send_every: 1
+      - calibrate_linear:
+          - 37580 -> 0 #39100
+          - 598745 -> 25 #600265
+    unit_of_measurement: "kg"
+    
+  - platform: adc
+    pin:
+      number: D2 #P0.28
+      mode: INPUT
+    name: "SoC"
+    accuracy_decimals: 2
+#    on_value:
+#      then:
+#        lambda: !lambda |-
+#          if(id(battery_voltage).state >= 3.7)
+#          {
+#            id(deep_sleep_1).set_sleep_duration(60*10*1000);
+#          }
+#          else
+#          {
+#            if(id(battery_voltage).state >= 3.3)
+#            {
+#              id(deep_sleep_1).set_sleep_duration(60*60*1000);
+#            }
+#            else
+#            {
+#              id(deep_sleep_1).set_sleep_duration(24*60*60*1000);
+#            }
+#          }
+    filters:
+      - multiply: 1.694915254237288
+      - calibrate_linear:
+          method: exact
+          datapoints:
+          - 3.2 -> 0
+          - 3.55 -> 20
+          - 3.7 -> 40
+          - 3.8 -> 60
+          - 3.95 -> 80
+          - 4.2 -> 100
+      - clamp:
+          min_value: 0
+          max_value: 100
+    unit_of_measurement: "%"
+    
+binary_sensor:
+  - platform: gpio
+    pin: 
+      number: D6 #P1.11
+      inverted: true
+      mode: INPUT
+    name: "Charged"
+    filters:
+      - delayed_on_off: 1s
+
+  - platform: gpio
+    pin: 
+      number: D3 #P0.29
+      inverted: true
+      mode: INPUT
+    name: "Charging"
+    device_class: battery_charging
+    filters:
+      - delayed_on_off: 1s
+
+#deep_sleep:
+#  id: deep_sleep_1
+#  run_duration: 15s
+#  sleep_duration: 10min

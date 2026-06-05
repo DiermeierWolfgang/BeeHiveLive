@@ -1,0 +1,1 @@
+This folder contains my .yaml file to create the ESP32C6 zigbee device via ESPHome. The .yaml has to be copied into a new ESPHome device of the ESPHome integration to generate a flashable .bin file.
