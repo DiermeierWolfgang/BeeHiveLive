@@ -372,12 +372,12 @@ void setup() {
   // Init button switch
   pinMode(BOOT_PIN, INPUT_PULLUP);
 
+  // Create storage for permanent data (still avaliable after resets)
+  preferences.begin("NVM", false);
   // initialize Deep Sleep
   initDeepSleep();
   // Setup zigbee signal strength, channel, etc
   initZigbee();
-  // Create storage for permanent data (still avaliable after resets)
-  preferences.begin("NVM", false);
   // Initialize internal temperature reading of the ESP32C6
   initInternalTempSensor();
   // Initialize analog reading for the Liion battery voltage for SoC calculation
@@ -394,9 +394,19 @@ void setup() {
   // When all EPs are registered, start Zigbee in End Device mode
   if (!Zigbee.begin()) {
     Serial.println("Zigbee failed to start!");
+    // Trying a different TX strength on next startup
+    int lastTXPower = preferences.getInt("TXPower", IEEE802154_TXPOWER_INDEX_MIN);
+    for (int i = 0; i < ((sizeof(TXPower) / sizeof(TXPower[0])) - 1); i++) {
+      if (lastTXPower == TXPower[i]) {
+        preferences.putInt("TXPower", TXPower[i+1]);
+        break;
+      } else {
+        preferences.putInt("TXPower", TXPower[0]);
+      }
+    }
     enterDeepSleep(10, false);
   } else {
-    Serial.println("Zigbee started successfully!");
+    Serial.printf("Zigbee started successfully! TX strength: %d dB\n", preferences.getInt("TXPower", IEEE802154_TXPOWER_INDEX_MIN));
   }
   Serial.println("Connecting to network");
   int connectionDuration = 0;
