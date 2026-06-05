@@ -19,6 +19,9 @@
 #define CN3791_CHRG_PIN     D3
 #define CN3791_DONE_PIN     D6
 
+// Zigbee communication configuration
+#define ZIGBEE_CHANNEL  15
+
 // Zigbee endpoint sensor configuration
 #define INTERNAL_TEMP_SENSOR_ENDPOINT_NUMBER  1
 #define DS18B20_TEMP_SENSOR_1_ENDPOINT_NUMBER 2
@@ -39,6 +42,10 @@
 #define DS18B20_CMD_READ_SCRATCH  0xBE
 #define DS18B20_SCRATCHPAD_SIZE   9
 #define DS18B20_CONVERT_MS        750
+
+// HX711 weight sensor definitions
+#define HX711_INITIAL_GAIN    0.000045454545
+#define HX711_INITIAL_OFFSET  1.647
 
 // Known DS18B20 addresses (0x28 at the end represents device family code)
 static const OneWireNg::Id DS18B20[] = {
@@ -170,6 +177,17 @@ void initDeepSleep() {
   esp_zb_set_rx_on_when_idle(false);
 }
 
+void initZigbee() {
+  // Increase transmission power of the ESP32C6
+  esp_zb_set_tx_power(20);
+  // Lock to channel 15 ONLY (Home Assistant coordinator channel)
+  Zigbee.setPrimaryChannelMask(1 << ZIGBEE_CHANNEL);
+  // Set fast join speed, will be automatically increased later if network is not found
+  Zigbee.setScanDuration(2);
+  // Extend the join timeout beyond the 30s default -> 60sec
+  Zigbee.setTimeout(60000);
+}
+
 
 // Internal Temperature Sensor
 void internal_temp_sensor_value_update() {
@@ -271,8 +289,8 @@ void hx711_sensor_value_update() {
 
   if (hx711gain == 0) {
     // Use default values or from memory if gain is not valid
-    hx711gain = preferences.getFloat("hx711gain", 0.0000454545454545);
-    hx711offset = preferences.getFloat("hx711offset", 1.647);
+    hx711gain = preferences.getFloat("hx711gain", HX711_INITIAL_GAIN);
+    hx711offset = preferences.getFloat("hx711offset", HX711_INITIAL_OFFSET);
   } else {
     // Udate memory with new values
     preferences.putFloat("hx711gain", hx711gain);
@@ -361,12 +379,15 @@ void setup() {
   initBinarySensor();
   // initialize Deep Sleep
   initDeepSleep();
+  // Setup zigbee signal strength, channel, etc
+  initZigbee();
 
   Serial.println("Starting Zigbee...");
   // When all EPs are registered, start Zigbee in End Device mode
   if (!Zigbee.begin()) {
     Serial.println("Zigbee failed to start!");
     Serial.println("Entering Deep Sleep");
+    esp_sleep_enable_timer_wakeup(10ULL * 1000000ULL);
     esp_deep_sleep_start();
   } else {
     Serial.println("Zigbee started successfully!");
@@ -374,6 +395,7 @@ void setup() {
   Serial.println("Connecting to network");
   int connectionDuration = 0;
   while (!Zigbee.connected()) {
+    Zigbee.setScanDuration(4);
     Serial.print(".");
     delay(100);
     connectionDuration++;
