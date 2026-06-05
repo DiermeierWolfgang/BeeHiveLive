@@ -8,6 +8,7 @@
 #include <HX711.h>
 #include <Zigbee.h>
 #include <Preferences.h>
+#include <hal/ieee802154_ll.h>
 
 // Input/Output definition
 #define BATTERY_VOLTAGE_PIN A2
@@ -179,7 +180,7 @@ void initDeepSleep() {
 
 void initZigbee() {
   // Increase transmission power of the ESP32C6
-  esp_zb_set_tx_power(20);
+  esp_zb_set_tx_power(IEEE802154_TXPOWER_VALUE_MAX);
   // Lock to channel 15 ONLY (Home Assistant coordinator channel)
   Zigbee.setPrimaryChannelMask(1 << ZIGBEE_CHANNEL);
   // Set fast join speed, will be automatically increased later if network is not found
