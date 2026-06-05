@@ -183,8 +183,8 @@ void initZigbee() {
   esp_zb_set_tx_power(IEEE802154_TXPOWER_VALUE_MAX);
   // Lock to channel 15 ONLY (Home Assistant coordinator channel)
   Zigbee.setPrimaryChannelMask(1 << ZIGBEE_CHANNEL);
-  // Set fast join speed, will be automatically increased later if network is not found
-  Zigbee.setScanDuration(2);
+  // Set long scan duration to help connection
+  Zigbee.setScanDuration(4);
   // Extend the join timeout beyond the 30s default -> 60sec
   Zigbee.setTimeout(60000);
 }
@@ -334,13 +334,13 @@ void cn3791_status_update() {
   zbCN3791Done.reportBinaryInput();
 }
 
-void enterDeepSleep() {
+void enterDeepSleep(uint duration, bool override) {
   // Get sleep time from home assistant and limit to 1 week
-  uint deepSleepTime = constrain(zbDeepSleep.getAnalogOutput(), 0, 604800);
+  uint deepSleepTime = constrain(duration, 0, 604800);
   Serial.printf("DeepSleep Duration:   Home Assistant: %d       NVM: %d\n", deepSleepTime, preferences.getUInt("dsTime",0));
 
   // Store valid duration from home assistant into memory
-  if (deepSleepTime != 0) {
+  if ((deepSleepTime != 0) && override) {
     preferences.putUInt("dsTime", deepSleepTime);
   }
   // Get sleep duration back from memory -> If nothing is stored function will return 0
@@ -366,6 +366,10 @@ void setup() {
   // Init button switch
   pinMode(BOOT_PIN, INPUT_PULLUP);
 
+  // initialize Deep Sleep
+  initDeepSleep();
+  // Setup zigbee signal strength, channel, etc
+  initZigbee();
   // Create storage for permanent data (still avaliable after resets)
   preferences.begin("NVM", false);
   // Initialize internal temperature reading of the ESP32C6
@@ -378,28 +382,26 @@ void setup() {
   initHX711();
   // initialize Binary Status e.g. for Solar charging IC (Charging + Done)
   initBinarySensor();
-  // initialize Deep Sleep
-  initDeepSleep();
-  // Setup zigbee signal strength, channel, etc
-  initZigbee();
+  
 
   Serial.println("Starting Zigbee...");
   // When all EPs are registered, start Zigbee in End Device mode
   if (!Zigbee.begin()) {
     Serial.println("Zigbee failed to start!");
-    Serial.println("Entering Deep Sleep");
-    esp_sleep_enable_timer_wakeup(10ULL * 1000000ULL);
-    esp_deep_sleep_start();
+    enterDeepSleep(10, false);
   } else {
     Serial.println("Zigbee started successfully!");
   }
   Serial.println("Connecting to network");
   int connectionDuration = 0;
   while (!Zigbee.connected()) {
-    Zigbee.setScanDuration(4);
     Serial.print(".");
     delay(100);
     connectionDuration++;
+    if (connectionDuration > 600) { // 60 second timeout
+        Serial.println("Failed to rejoin, entering deep sleep");
+        enterDeepSleep(10, false);
+    }
   }
   Serial.println();
   if (connectionDuration > 10) {
@@ -433,7 +435,7 @@ void loop() {
   hx711_sensor_value_update();
   cn3791_status_update();
   //delay(2000);
-  enterDeepSleep();
+  enterDeepSleep(zbDeepSleep.getAnalogOutput(), true);
 
   // 10 sec delay in case no deep sleep is defined
   delay(9000);
