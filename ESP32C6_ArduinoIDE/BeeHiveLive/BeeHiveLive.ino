@@ -11,14 +11,16 @@
 #include <hal/ieee802154_ll.h>
 
 // Input/Output definition
-#define BATTERY_VOLTAGE_PIN A2
-#define I2C_CLK_PIN         D5
-#define I2C_DATA_PIN        D4
-#define ONE_WIRE_BUS_PIN    I2C_DATA_PIN
-#define HX711_SCK_PIN       D0
-#define HX711_DOUT_PIN      D1
-#define CN3791_CHRG_PIN     D3
-#define CN3791_DONE_PIN     D6
+#define BATTERY_VOLTAGE_PIN   A2
+#define I2C_CLK_PIN           D5
+#define I2C_DATA_PIN          D4
+#define ONE_WIRE_BUS_PIN      I2C_DATA_PIN
+#define HX711_SCK_PIN         D0
+#define HX711_DOUT_PIN        D1
+#define CN3791_CHRG_PIN       D3
+#define CN3791_DONE_PIN       D6
+#define RF_SWITCH_POWER       3     // This is different from calling D3!
+#define RF_SWITCH_PORT_SELECT 14
 
 // Zigbee communication configuration
 #define ZIGBEE_CHANNEL  15
@@ -65,11 +67,11 @@ static const char* DS18B20_NAME[] = {
     "Temp3",
 };
 
-static const int TXPower[] = {
+/*static const int TXPower[] = {
   IEEE802154_TXPOWER_VALUE_MAX,
   IEEE802154_TXPOWER_VALUE_MIN,
   IEEE802154_TXPOWER_INDEX_MIN
-};
+};*/
 
 
 ZigbeeTempSensor zbInternalTempSensor = ZigbeeTempSensor(INTERNAL_TEMP_SENSOR_ENDPOINT_NUMBER);
@@ -89,6 +91,19 @@ OneWireNg_CurrentPlatform oneWire(ONE_WIRE_BUS_PIN, true);
 HX711 hx711;
 Preferences preferences;
 
+
+void initAntenna() {
+  // Seeed Studio ESP32C6 features an internal and external antenna
+  // Activate antenna selection
+  pinMode(RF_SWITCH_POWER, OUTPUT);
+  digitalWrite(RF_SWITCH_POWER, LOW);
+
+  delay(100);
+
+  // Select external antenna
+  pinMode(RF_SWITCH_PORT_SELECT, OUTPUT);
+  digitalWrite(RF_SWITCH_PORT_SELECT, HIGH);
+}
 
 void initInternalTempSensor() {
   // Set the name of the zigbee device
@@ -186,7 +201,7 @@ void initDeepSleep() {
 
 void initZigbee() {
   // Increase transmission power of the ESP32C6
-  esp_zb_set_tx_power(preferences.getInt("TXPower", IEEE802154_TXPOWER_VALUE_MAX));
+  esp_zb_set_tx_power(IEEE802154_TXPOWER_VALUE_MAX);//preferences.getInt("TXPower", IEEE802154_TXPOWER_VALUE_MAX));
   // Lock to channel 15 ONLY (Home Assistant coordinator channel)
   Zigbee.setPrimaryChannelMask(1 << ZIGBEE_CHANNEL);
   // Set long scan duration to help connection
@@ -374,6 +389,8 @@ void setup() {
 
   // Create storage for permanent data (still avaliable after resets)
   preferences.begin("NVM", false);
+  // initialize antenna
+  initAntenna();
   // initialize Deep Sleep
   initDeepSleep();
   // Setup zigbee signal strength, channel, etc
@@ -395,7 +412,7 @@ void setup() {
   if (!Zigbee.begin()) {
     Serial.println("Zigbee failed to start!");
     // Trying a different TX strength on next startup
-    int lastTXPower = preferences.getInt("TXPower", IEEE802154_TXPOWER_INDEX_MIN);
+    /*int lastTXPower = preferences.getInt("TXPower", IEEE802154_TXPOWER_INDEX_MIN);
     for (int i = 0; i < ((sizeof(TXPower) / sizeof(TXPower[0])) - 1); i++) {
       if (lastTXPower == TXPower[i]) {
         preferences.putInt("TXPower", TXPower[i+1]);
@@ -403,7 +420,7 @@ void setup() {
       } else {
         preferences.putInt("TXPower", TXPower[0]);
       }
-    }
+    }*/
     enterDeepSleep(10, false);
   } else {
     Serial.printf("Zigbee started successfully! TX strength: %d dB\n", preferences.getInt("TXPower", IEEE802154_TXPOWER_INDEX_MIN));
@@ -417,7 +434,7 @@ void setup() {
     if (connectionDuration > 600) { // 60 second timeout
         Serial.println("Failed to rejoin, entering deep sleep");
         // Trying a different TX strength on next startup
-        int lastTXPower = preferences.getInt("TXPower", IEEE802154_TXPOWER_INDEX_MIN);
+        /*int lastTXPower = preferences.getInt("TXPower", IEEE802154_TXPOWER_INDEX_MIN);
         for (int i = 0; i < ((sizeof(TXPower) / sizeof(TXPower[0])) - 1); i++) {
           if (lastTXPower == TXPower[i]) {
             preferences.putInt("TXPower", TXPower[i+1]);
@@ -425,7 +442,7 @@ void setup() {
           } else {
             preferences.putInt("TXPower", TXPower[0]);
           }
-        }
+        }*/
         enterDeepSleep(10, false);
     }
   }
