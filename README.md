@@ -30,7 +30,7 @@ Without thinking about the housing or connectivity to some sensors I designed th
 Surprisingly the device worked for 2 years until one winter water enterd the housing and broke everything.
 Before that I have already realized, that WIFI connectivity drains the battery fast. It was basically not possible to read values in the winter.
 
-### Requirements/Features for V2.0
+### Requirements/Features for this version 2.0
 These requirements are a little misplaced under this chapter, because some of them also affect software. But anyways I wanted to build on what was good in the previous design and add improvements. So I had the following requirements:
 1. Solar charging
    - Reuse 5W solar panel
@@ -58,7 +58,7 @@ These requirements are a little misplaced under this chapter, because some of th
 9. Order already assembled PCBAs
 
 ### PCB design
-#### The schematic
+#### Schematic
 I used EasyEDA for the schematic and just made sure to follow the guideline for each IC. In addition I placed some decoupling capacitors.
 The sensors are connected to the microcontroller pins according to the following mapping:
 | Microcontroller I/O | Function |
@@ -84,7 +84,7 @@ The most time consuming part was to find components which are avaliable for the 
 <img width="1937" height="1375" alt="image" src="https://github.com/user-attachments/assets/b272089d-4dd8-4f34-b830-ff022063332c" />
 </p>
 
-#### The PCB Layout
+#### PCB Layout
 For the layout first roughly placed all of the components into the groups they belong to. So for example everything related to solar charging toghether.
 Then I estimated the size I need for the enclosure based on that. The goal was to have it as compact as possible. The required space was almost completely defined be the usage of two cylindrical Li-Ion cells.
 
@@ -110,6 +110,61 @@ After two weeks of waiting I received 5 PCBAs. I chose a white silkscreen hoping
 <p align="center">
 <img width="500" height="490" alt="image" src="https://github.com/user-attachments/assets/4b60f29a-f0f1-4aea-b905-c12fbe09173f" />
 </p>
+
+### Housing and Connectors
+As described in the PCB layout I've decided to use [this housing](https://www.reichelt.de/de/de/shop/produkt/industriegehaeuse_105_x_105_x_60_1mm_ip66_ip68_lichtgrau-340541) for my electronics. It is IP68 certified which is good for outside use, since it can even be submerged in water. That means I can even put my beehives under water and the electronics will still work. The first thing I did when the housing arrived was drilling some holes in it usind a table drill.
+
+> [!Warning]
+> Make sure to fasten your workpiece when using a table drill. Plastics tend to get stuck on the drill and fly through your workshop with orbital escape velocity when they are not properly fixed in place. I made this mistake during my university days and still carry the scars to prove it. Don't safe time - Clamp down your workpiece - Don't force your drill in to quickly!
+
+The holes are used to mount some [M12 circular connectors from amphenol](https://amphenolltw.com/product-info/M-Series/M-Series.M12.TCode/?). These offer IP67-IP69K protection and are avaliable with different amounts of pins.
+I used a 3-pin version for my solar panel connection and 4 pin versions for the weight and temperature sensors.
+This also prevents plugging the solar panel into the wrong housing connector.
+
+<p align="center">
+<img width="1272" height="806" alt="image" src="https://github.com/user-attachments/assets/921445d5-5747-4c6a-9fa4-94367d17806e" />
+</p>
+
+### PCB Testing
+> [!Caution]
+> In this PCB design there are two identical Li-Ion cells in parallel. When putting the cells on the PCB for the first time it is __strictly required__ to charge them to the exact same voltage level first!
+>
+> <p align="center">
+> <img width="577" height="236" alt="image" src="https://github.com/user-attachments/assets/8cc8ede8-24df-4bec-82e4-68377e1ee77e" />
+</p>
+
+#### Solar charging
+To test solar charging I connected a power supply to the solar charge input and added one Li-Ion battery to the PCB. At first I calibrated the maximum power voltage using the potentiometer on my PCB. This is possible by setting the lowest possible current limit on the power supply and then setting a voltage above the maximum power voltage of the solar panel.
+
+<p align="center">
+<img width="289" height="339" alt="image" src="https://github.com/user-attachments/assets/51b5ec13-d469-43e0-89c9-d2d0775136d0" />
+</p>
+
+In my case the maximum power voltage of the panel is 17.6V. So I set my lowest current limit of 100mA and a voltage of 20V on the power supply. Afterwards I adjusted the potentiometer on the PCB until the voltage on the power supply read 17.6V:
+
+<p align="center">
+<img width="665" height="387" alt="image" src="https://github.com/user-attachments/assets/10603696-ca2e-4059-940e-aaff076ad2eb" />
+</p>
+
+I made sure to test my PCBs in a harsh environment. If they survive my sawdust and solder covered workdesk, they will survive everything.
+> [!Tip]
+> If you want an excuse to buy a new power supply then just leave it next to a table saw.
+
+Afterwards I also checked the maximum expected solar voltage without current limitation:
+
+<p align="center">
+<img width="665" height="275" alt="image" src="https://github.com/user-attachments/assets/eda0f42f-1dda-4060-8f2e-94f9aa9f1878" />
+</p>
+
+#### 3.3V supply
+Before plugging in the microcontroller, I checked if the 3.3V supply works how it is supposed to:
+
+<p align="center">
+<img width="651" height="494" alt="image" src="https://github.com/user-attachments/assets/63974837-25f6-4f8b-85dd-6d96f0142891" />
+</p>
+
+#### Finalizing the hardware
+As a last step I added a PCB antenna for the ESP32C6 and closed the lid. Then the hardware was ready for some software.
 
 ## Software Development
 > [!Note]
@@ -631,4 +686,4 @@ Adding binary informations of the solar charger and transmit them via Zigbee was
 
 From this point on I was finally able to integrate the ESP32C6 into my custom PCB, which means from this point on we are leaving the software development stage and go into the system integration (e.g. combining hardware and software).
 
-## Integration Testing
+## System Integration
