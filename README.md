@@ -6,6 +6,111 @@ This respository describes a bee hive monitor that is integrated to Home Assista
 >
 > Let's see where this will get us...
 
+## Hardware Development
+A few years ago I have already created a similar PCB with the difference, that I had less budget avaliable and no idea how harsh the outside environment can be towards electronics. Before going into detail about this project, I would like to explain a little bit about my previous design. After all I was reusing a lot from that project and there are some nice mistakes to learn from.
+
+### Previous mistakes to learn from
+So back in university while I was writing on my masters thesis I had quite the need to procastinate. So I designed my first PCB that had the following features:
+1. Li-Ion battery
+2. Solar charging
+3. ESP32
+4. Wifi connectivity
+5. 3x D18B20 Temperature sensors
+6. 1x hx711 weight sensor
+
+Without thinking about the housing or connectivity to some sensors I designed the PCB and made everyting as compact as possible. Basically rotating every part on the PCB layout to enable the shortest traces and getting the board outline smaller and smaller while still fitting every component on the top side. I ended up wit a PCB that was about 25mm x 50mm which included the footprint of the ESP32. It did work but when integrating everything it got chaotic.
+
+- I had forgotten to add the HX711 weight sensor chip to the PCB so I had to wire it externally
+- There were no mounting holes on the PCB, so it sat loose in the housing
+- The housing was only an electrical box where I punched holes for the sensors with a screwdriver
+- All sensors were connected with 2.54mm headers (typical headers for breakout boards etc.)
+- The combination of headers on the sensors and holes in the housing meant, that It was not possible to disconnect the sensors from that housing without removing the female headers from their wires
+- The housing was of course not waterproof
+
+Surprisingly the device worked for 2 years until one winter water enterd the housing and broke everything.
+Before that I have already realized, that WIFI connectivity drains the battery fast. It was basically not possible to read values in the winter.
+
+### Requirements/Features for V2.0
+These requirements are a little misplaced under this chapter, because some of them also affect software. But anyways I wanted to build on what was good in the previous design and add improvements. So I had the following requirements:
+1. Solar charging
+   - Reuse 5W solar panel
+   - Reuse of the CN3791 chip which enables charging of Li-Ion cells in a 1S-xP configuration
+   - Add variable control of the MPPT-voltage
+2. Li-Ion cells
+   - Use Li-Ion cells I still have in a drawer
+   - Reuse battery protection circuit
+   - Add a bracket to directly mount the cells on the PCB
+3. Zigbee connectivity (This might have been a mistake)
+   - Loose WIFI connectivity
+   - Hope the Zigbee range is enough to connect ~20m to my house
+   - External antenna to improve range
+4. HX711 weight sensor
+   - Improve on V1.0 by placing it directly on the PCB
+5. D18B20 temperature sensors
+   - Reuse from V1.0
+5. Connectivity on PCB level
+   - Add I2C and SPI headers on the PCB for future sensors
+7. Swap-able microcontrollers
+   - Add header to mount microcontrollers with the 14-pin header footprint from Seeed Studio
+8. Housing
+   - Use of a waterproof houseing
+   - Use of round waterproof connectors for each individual sensor that can be unscrewed with beekeeper gloves
+9. Order already assembled PCBAs
+
+### PCB design
+#### The schematic
+I used EasyEDA for the schematic and just made sure to follow the guideline for each IC. In addition I placed some decoupling capacitors.
+The sensors are connected to the microcontroller pins according to the following mapping:
+| Microcontroller I/O | Function |
+| ------------------- | -------- |
+| GPIO0 | HX711 SCK |
+| GPIO1 | HX711 DATA |
+| GPIO2 | Battery SoC |
+| GPIO21 | CN3791 Charge |
+| GPIO22 | I2C SDA |
+| GPIO23 | I2C SCL |
+| GPIO16 | CN3791 Done |
+| GPIO17 | NC |
+| GPIO19 | SPI SCK |
+| GPIO20 | SPI MISO |
+| GPIO18 | SPI MOSI |
+
+The most time consuming part was to find components which are avaliable for the placement service of JLCPCB. I did not put to much effort into making it look nice so please don't judge me to much. I am doing this during my vacation.
+
+> [!Note]
+> Let's play a fun little game: Can you find which GND is placed upside down?
+
+<p align="center">
+<img width="1937" height="1375" alt="image" src="https://github.com/user-attachments/assets/b272089d-4dd8-4f34-b830-ff022063332c" />
+</p>
+
+#### The PCB Layout
+For the layout first roughly placed all of the components into the groups they belong to. So for example everything related to solar charging toghether.
+Then I estimated the size I need for the enclosure based on that. The goal was to have it as compact as possible. The required space was almost completely defined be the usage of two cylindrical Li-Ion cells.
+
+> [!Note]
+> I wanted to use the cylindrical cells not only because I had them sitting in my drawer for two years at the brink of being dead but also because they kind of look like explosives and that should scare of anyone trying to steal my bees.
+
+I decided to go with this housing: [Industriegehäuse, 105 x 105 x 60,1mm, IP66/IP68, lichtgrau](https://www.reichelt.de/de/de/shop/produkt/industriegehaeuse_105_x_105_x_60_1mm_ip66_ip68_lichtgrau-340541)
+
+Based on the technical drawing of the housing I created a board outline with 1-2mm margin and placed 4.3mm drilling holes to mount the PCB to the housing.
+
+> [!Note]
+> It might have been overkill to use __8__ mounting holes for such a small PCB. In case there is a hurricane that levels all of my bee hives, at least my PCB will still be in the same position. That's what you call safety margin.
+
+I've placed the remaining components in areas that made sense based on connectors and space. Decoupling capacitors of course as close to the ICs supply pins.
+As a last step I defined the back and the top side as ground planes and added breakaway tabs in each corner (That was easier than drawing more complex shapes with exact dimensions).
+
+<p align="center">
+<img width="500" height="500" alt="image" src="https://github.com/user-attachments/assets/b9fe85e2-b014-428f-af89-2cd177d55764" />
+</p>
+
+After two weeks of waiting I received 5 PCBAs. I chose a white silkscreen hoping it would stay cooler, since it will be sitting in the sun.
+
+<p align="center">
+<img width="500" height="490" alt="image" src="https://github.com/user-attachments/assets/4b60f29a-f0f1-4aea-b905-c12fbe09173f" />
+</p>
+
 ## Software Development
 > [!Note]
 > I have no idea how to programm so I basically just steal code and torture every AI known to man to get my code running.
@@ -520,8 +625,10 @@ So I just entered 0xffffff instead of an application (this is different from _ES
 It was time for another party!
 
 #### Final additions - Binary information of solar charger
+The CN3791 solar charging IC I built into my PCB features two open-drain outputs. One of them is active when solar charging is active and the other one when the battery is fully charged. In my case they are connected to an individual pull-up resistor and individual pin of the ESP32C6. By reading the binary status of those pins it is possible to know what the solar charging IC is doing.
 
-## Hardware Development
-Yes I developed custom PCBs for the project.
-## Testing
+Adding binary informations of the solar charger and transmit them via Zigbee was quite easy to implement, since binary sensors are common in Zigbee devices (Door/Window switches, HVAC on/off, ...).  I took code from the Zigbee_Binary_Input_Output sketch and adjusted it to my needs and within 5min I saw the solar information in Home Assistant.
 
+From this point on I was finally able to integrate the ESP32C6 into my custom PCB, which means from this point on we are leaving the software development stage and go into the system integration (e.g. combining hardware and software).
+
+## Integration Testing
