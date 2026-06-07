@@ -714,3 +714,52 @@ If the end device reads a value 0 from Home Assistant it will ignore this value 
 From this point on I was finally able to integrate the ESP32C6 into my custom PCB, which means from this point on we are leaving the software development stage and go into the system integration (e.g. combining hardware and software).
 
 ## System Integration
+### Initial setup and weight sensor calibration
+I connected the end device to Home Assistant and connected everything (1x solar panel, 3x temperature sensors and 1x load cell). Initially I did not activate deep sleep to make it easier to calibrate the weight measurement first.
+
+For the calibration I simply reused the offset I already had in the previous project. It is already stated as weight offset in kg. For the gain it was required to recalibrate based on a known weight. I initially used the gain of the previous project and compared to measurements. The first measurement was only the weight of the bee hive. The second measurment was the weight of the bee hive + a 10kg weight I placed on top of the bee hive:
+
+<p align="center">
+<img width="472" height="356" alt="image" src="https://github.com/user-attachments/assets/1428d7f4-9e8f-49bb-b70b-f4d7020a51f1" />
+</p>
+
+Based on the two measurments it is possible to recalculate the required gain and sent it to the ESP32 via Home Assistant.
+
+### Connectivity issues after deep sleep
+After everything was set up and working I sent the ESP32C6 to deep sleep with a duration of 5 minutes.
+I waited in front of my screen waiting for the next measurement... 5 minutes passed.. 10 minutes passed.. I got myself some coffee.. 30 minutes passed.. I traveled to Japan to eat some wagyu beef in my favorite restaurant in Osaka and got back home.. no new measurement.
+
+I reflashed and reconnected the ESP32 to Home Assistant multiple times and had always the same issue. As long as the device was not in sleep I was barely able to keep a stable connection. Once I went to sleep and the ESP32 had to rejoin the zigbee network, it never got a stable connection.
+
+Optimizing the code did not help to much. I increased the transmission power of the transceiver using the following line of code:
+```
+esp_zb_set_tx_power(IEEE802154_TXPOWER_VALUE_MAX);
+```
+I even tried cycling through different transmission powers in case the communication failed without any success. Also masking the zigbee network channel to prevent searching through the wrong channels showed no improvement.
+
+> [!Tip]
+> Masking the zigbee channels only makes sense for the initial pairing. Once the device was paired once the network information is stored in the zigbee stack.
+
+Nothing I tried seemed to work and I came to one conclusion: You cannot compensate a wrong hardware design decission with software.
+
+### Is my antenna even activated?!
+I started to do some research on how to increase the range of my device and the initial plan was to change my setup to LoRA communication which can achieve multiple kilometers of range. After all with my design it is possible to use any 14-pin seeed studio microcontroller and breakout board.
+A great solution would have been the [XIAO nRF52840 & Wio-SX1262 Kit for Meshtastic](https://www.seeedstudio.com/XIAO-nRF52840-Wio-SX1262-Kit-for-Meshtastic-p-6400.html).
+
+But after checking the [Seeed Studio documentation for the ESP32C6](https://wiki.seeedstudio.com/xiao_esp32c6_getting_started/#hardware-overview) I stumbled on my problem: I never activated my external antenna...
+
+So I added the following code to activate it and the now connection works and is stable:
+````
+void initAntenna() {
+  // Seeed Studio ESP32C6 features an internal and external antenna
+  // Activate antenna selection
+  pinMode(RF_SWITCH_POWER, OUTPUT);
+  digitalWrite(RF_SWITCH_POWER, LOW);
+
+  delay(100);
+
+  // Select external antenna
+  pinMode(RF_SWITCH_PORT_SELECT, OUTPUT);
+  digitalWrite(RF_SWITCH_PORT_SELECT, HIGH);
+}
+````
