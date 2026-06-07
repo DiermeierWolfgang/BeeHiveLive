@@ -120,12 +120,19 @@ As described in the PCB layout I've decided to use [this housing](https://www.re
 > Make sure to fasten your workpiece when using a table drill. Plastics tend to get stuck on the drill and fly through your workshop with orbital escape velocity when they are not properly fixed in place. I made this mistake during my university days and still carry the scars to prove it. Don't safe time - Clamp down your workpiece - Don't force your drill in to quickly!
 
 The holes are used to mount some [M12 circular connectors from amphenol](https://amphenolltw.com/product-info/M-Series/M-Series.M12.TCode/?). These offer IP67-IP69K protection and are available with different amounts of pins.
-I used a 3-pin version for my solar panel connection and 4 pin versions for the weight and temperature sensors.
+I used a 3-pin version for my solar panel connection and 4-pin versions for the weight and temperature sensors.
 This also prevents plugging the solar panel into the wrong housing connector.
 
 <p align="center">
 <img width="1272" height="806" alt="image" src="https://github.com/user-attachments/assets/921445d5-5747-4c6a-9fa4-94367d17806e" />
 </p>
+
+Assembling the weight sensor connector on the load cell wire was quite tricky, since there is already a bee hive on top of it and the wire is just 1m long. So lets say the bees were quite interested in watching me putting everything together up close. They sat on my hands during the hole process and I was not able to assemble everything with my gloves on.
+
+I h9ope thew swellinf will ncot get to bad, it is hard to type on thew keybpoard thos wayx...
+
+> [!Note]
+> This is the reason I wanted to have connectors that can be removed from my housing even with gloves on.
 
 ### PCB Testing
 > [!Caution]
@@ -597,7 +604,7 @@ How did I come to this conclusion? Because the code didn't crash when I commente
 <img width="640" height="360" alt="image" src="https://github.com/user-attachments/assets/a1381e57-75f5-40b7-ab3f-380beecad223" />
 </p>
 
-> [!Note]
+> [!Tip]
 > If it is already 3am and you are still debugging: Just go to bed.
 
 #### Small steps to victory
@@ -681,10 +688,28 @@ So I just entered 0xffffff instead of an application (this is different from _ES
 
 It was time for another party!
 
-#### Final additions - Binary information of solar charger
+#### Binary information of solar charger
+It was friday, so the last day for me to hear the sound of an impact drill.
+
 The CN3791 solar charging IC I built into my PCB features two open-drain outputs. One of them is active when solar charging is active and the other one when the battery is fully charged. In my case they are connected to an individual pull-up resistor and individual pin of the ESP32C6. By reading the binary status of those pins it is possible to know what the solar charging IC is doing.
 
 Adding binary informations of the solar charger and transmit them via Zigbee was quite easy to implement, since binary sensors are common in Zigbee devices (Door/Window switches, HVAC on/off, ...).  I took code from the Zigbee_Binary_Input_Output sketch and adjusted it to my needs and within 5min I saw the solar information in Home Assistant.
+
+#### Live calibration of deep sleep and weight sensor
+Since the load cell is already below one of the bee hives it makes sense to implement the possibility to send the correct gain and offset of the scale via zigbee to the ESP32C6. The code to implement an entity to send data from Home Assistant to the end device is quite similar to the previous _analog input_ definitions and just called _analog output_. It is also avaliable in the zigbee examples inside the Arduino IDE. Overall I have three analog outputs and therefore calibratable values.
+1. Deep Sleep Duration
+2. HX711 Gain
+3. HX711 Offset
+
+As the name implies it is also possible to adjust the deep sleep duration of the ESP32C6 to safe some battery life. Once the ESP32C6 goes into deep sleep the power consumption is greatly reduced. Upon wakeup the code starts from the beginning and reruns the complete setup routine.
+
+That also introduced a new issue: Once the ESP32 wakes up from deep sleep, it has forgotten all of it's previous variables. The previously set weight sensor gain, offset and the deep sleep duration are reset. Fortunately the Zigbee communication restarts without going through the pairing process in the Zigbee Home Assistant integration again. However any Analog Output value (sent from Home Assistant to the end device) is received as "0" after deep sleep.
+
+> [!Note]
+> There might be some sophisticated solution to this problem I could find after spending a few more hours and drinking more coffee, but if you got this far in my documenation you might have already realized, that I am not the definition of sophisticated.
+
+To solve this issue I added the [Preferences library](https://github.com/vshymanskyy/Preferences) to my code and stored all relevant information inside the microcontrollers NVS. This way I can access this information even after losing the power supply to the ESP32C6.
+If the end device reads a value 0 from Home Assistant it will ignore this value and use the last value from the NVS.
 
 From this point on I was finally able to integrate the ESP32C6 into my custom PCB, which means from this point on we are leaving the software development stage and go into the system integration (e.g. combining hardware and software).
 
