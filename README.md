@@ -1,24 +1,24 @@
 # BeeHiveLive
-This respository describes a bee hive monitor that is integrated to Home Assistant as a zigbee end device. The bee hive monitor is a custom made PCBA that includes an I2C interface for temperature/humidity measurement, load cell for weight measurement and solar charging circuitry for Lithium-Ion batteries.
+This repository describes a bee hive monitor that is integrated to Home Assistant as a zigbee end device. The bee hive monitor is a custom made PCBA that includes an I2C interface for temperature/humidity measurement, load cell for weight measurement and solar charging circuitry for Lithium-Ion batteries.
 > [!Note]
 > It is almost 2am at night and my brain is not properly working anymore, so I would like to apologize for this documentation.
-> Also there might be some sarkasm inside this document since the whole process makes me question my sanity.
+> Also there might be some sarcasm inside this document since the whole process makes me question my sanity.
 >
 > Let's see where this will get us...
 
 ## Hardware Development
-A few years ago I have already created a similar PCB with the difference, that I had less budget avaliable and no idea how harsh the outside environment can be towards electronics. Before going into detail about this project, I would like to explain a little bit about my previous design. After all I was reusing a lot from that project and there are some nice mistakes to learn from.
+A few years ago I have already created a similar PCB with the difference, that I had less budget available and no idea how harsh the outside environment can be towards electronics. Before going into detail about this project, I would like to explain a little bit about my previous design. After all I was reusing a lot from that project and there are some nice mistakes to learn from.
 
 ### Previous mistakes to learn from
-So back in university while I was writing on my masters thesis I had quite the need to procastinate. So I designed my first PCB that had the following features:
+So back in university while I was writing on my masters thesis I had quite the need to procrastinate. So I designed my first PCB to monitor bee hives that had the following features:
 1. Li-Ion battery
 2. Solar charging
 3. ESP32
 4. Wifi connectivity
-5. 3x D18B20 Temperature sensors
-6. 1x hx711 weight sensor
+5. 3x DS18B20 Temperature sensors
+6. 1x HX711 weight sensor
 
-Without thinking about the housing or connectivity to some sensors I designed the PCB and made everyting as compact as possible. Basically rotating every part on the PCB layout to enable the shortest traces and getting the board outline smaller and smaller while still fitting every component on the top side. I ended up wit a PCB that was about 25mm x 50mm which included the footprint of the ESP32. It did work but when integrating everything it got chaotic.
+Without thinking about the housing or connectivity to some sensors I designed the PCB and made everything as compact as possible. Basically rotating every part on the PCB layout to enable the shortest traces and getting the board outline smaller and smaller while still fitting every component on the top side. I ended up with a PCB that was about 25mm x 50mm which included the footprint of the ESP32. It did work but when integrating everything it got chaotic:
 
 - I had forgotten to add the HX711 weight sensor chip to the PCB so I had to wire it externally
 - There were no mounting holes on the PCB, so it sat loose in the housing
@@ -27,8 +27,8 @@ Without thinking about the housing or connectivity to some sensors I designed th
 - The combination of headers on the sensors and holes in the housing meant, that It was not possible to disconnect the sensors from that housing without removing the female headers from their wires
 - The housing was of course not waterproof
 
-Surprisingly the device worked for 2 years until one winter water enterd the housing and broke everything.
-Before that I have already realized, that WIFI connectivity drains the battery fast. It was basically not possible to read values in the winter.
+Surprisingly the device worked for 2 years until one winter water entered the housing and broke everything.
+Before that I have already realized, that WIFI connectivity drains the battery fast. It was basically not possible to read values during the winter.
 
 ### Requirements/Features for this version 2.0
 These requirements are a little misplaced under this chapter, because some of them also affect software. But anyways I wanted to build on what was good in the previous design and add improvements. So I had the following requirements:
@@ -41,21 +41,23 @@ These requirements are a little misplaced under this chapter, because some of th
    - Reuse battery protection circuit
    - Add a bracket to directly mount the cells on the PCB
 3. Zigbee connectivity (This might have been a mistake)
-   - Loose WIFI connectivity
+   - Remove or at least not use WIFI
    - Hope the Zigbee range is enough to connect ~20m to my house
    - External antenna to improve range
 4. HX711 weight sensor
    - Improve on V1.0 by placing it directly on the PCB
-5. D18B20 temperature sensors
+5. DS18B20 temperature sensors
    - Reuse from V1.0
 5. Connectivity on PCB level
    - Add I2C and SPI headers on the PCB for future sensors
 7. Swap-able microcontrollers
    - Add header to mount microcontrollers with the 14-pin header footprint from Seeed Studio
 8. Housing
-   - Use of a waterproof houseing
+   - Use of a waterproof housing
    - Use of round waterproof connectors for each individual sensor that can be unscrewed with beekeeper gloves
 9. Order already assembled PCBAs
+   - No more hand soldering of 0603 SMDs
+   - Allows me to use even smaller ICs
 
 ### PCB design
 #### Schematic
@@ -75,7 +77,7 @@ The sensors are connected to the microcontroller pins according to the following
 | GPIO20 | SPI MISO |
 | GPIO18 | SPI MOSI |
 
-The most time consuming part was to find components which are avaliable for the placement service of JLCPCB. I did not put to much effort into making it look nice so please don't judge me to much. I am doing this during my vacation.
+The most time consuming part was to find components which are available for the placement service of JLCPCB. I did not put to much effort into making it look nice so please don't judge me to much. I am doing this during my vacation.
 
 > [!Note]
 > Let's play a fun little game: Can you find which GND is placed upside down?
@@ -85,7 +87,7 @@ The most time consuming part was to find components which are avaliable for the 
 </p>
 
 #### PCB Layout
-For the layout first roughly placed all of the components into the groups they belong to. So for example everything related to solar charging toghether.
+For the layout first roughly placed all of the components into the groups they belong to. So for example everything related to solar charging together.
 Then I estimated the size I need for the enclosure based on that. The goal was to have it as compact as possible. The required space was almost completely defined be the usage of two cylindrical Li-Ion cells.
 
 > [!Note]
@@ -112,12 +114,12 @@ After two weeks of waiting I received 5 PCBAs. I chose a white silkscreen hoping
 </p>
 
 ### Housing and Connectors
-As described in the PCB layout I've decided to use [this housing](https://www.reichelt.de/de/de/shop/produkt/industriegehaeuse_105_x_105_x_60_1mm_ip66_ip68_lichtgrau-340541) for my electronics. It is IP68 certified which is good for outside use, since it can even be submerged in water. That means I can even put my beehives under water and the electronics will still work. The first thing I did when the housing arrived was drilling some holes in it usind a table drill.
+As described in the PCB layout I've decided to use [this housing](https://www.reichelt.de/de/de/shop/produkt/industriegehaeuse_105_x_105_x_60_1mm_ip66_ip68_lichtgrau-340541) for my electronics. It is IP68 certified which is good for outside use, since it can even be submerged in water. That means I can even put my beehives under water and the electronics will still work. The first thing I did when the housing arrived was drilling some holes in it using a table drill.
 
 > [!Warning]
 > Make sure to fasten your workpiece when using a table drill. Plastics tend to get stuck on the drill and fly through your workshop with orbital escape velocity when they are not properly fixed in place. I made this mistake during my university days and still carry the scars to prove it. Don't safe time - Clamp down your workpiece - Don't force your drill in to quickly!
 
-The holes are used to mount some [M12 circular connectors from amphenol](https://amphenolltw.com/product-info/M-Series/M-Series.M12.TCode/?). These offer IP67-IP69K protection and are avaliable with different amounts of pins.
+The holes are used to mount some [M12 circular connectors from amphenol](https://amphenolltw.com/product-info/M-Series/M-Series.M12.TCode/?). These offer IP67-IP69K protection and are available with different amounts of pins.
 I used a 3-pin version for my solar panel connection and 4 pin versions for the weight and temperature sensors.
 This also prevents plugging the solar panel into the wrong housing connector.
 
@@ -168,23 +170,23 @@ As a last step I added a PCB antenna for the ESP32C6 and closed the lid. Then th
 
 ## Software Development
 > [!Note]
-> I have no idea how to programm so I basically just steal code and torture every AI known to man to get my code running.
+> I have no idea how to program so I basically just steal code and torture every AI known to man to get my code running.
 > It is the software equivalent of using Duck Tape in order to mount a jet engine to a Boeing 787-9 Dreamliner.
 
 ### Step 1: Being a failure at using the nrf52840
-I planned to use a seeed studio brakeout board based microcontroller that features Zigbee connectivity.
+I planned to use a seeed studio breakout board based microcontroller that features Zigbee connectivity.
 That enables me to connect the device to my already established Zigbee mesh.
 After a short search I stumbled upon two different options:
 1. [Seeed Studio XIAO ESP32C6](https://wiki.seeedstudio.com/xiao_esp32c6_getting_started/)
 2. [Seeed Studio XIAO NRF52840](https://wiki.seeedstudio.com/XIAO_BLE/)
 
-After some googling "ESP32C6 vs NRF52840 current consumption" it turns out, that the NRF52840 is supposed to have a really low power comsumption, making it absolutely perfect for my application.
+After some googling "ESP32C6 vs NRF52840 current consumption" it turns out, that the NRF52840 is supposed to have a really low power consumption, making it absolutely perfect for my application.
 Even something about compatibility with ESP Home and the Arduino IDE is written in the documentation, so I knew that I will have an easy time programming it (Foreshadowing can be quite obvious).
 
 #### The limitations of ESP Home and yaml
 It is possible to generate code in ESP home and it actually has such a low power consumption, that I was not even able to pick it up with my USB power meter.
 However there is one problem. I want to be compatible with One-Wire devices, I2C and an HX711 weight sensor.
-At first I tried implementing one of my dallas temperature sensors using the One-Wire protocoll.
+At first I tried implementing one of my dallas temperature sensors using the One-Wire protocol.
 I fired up the code generation in ESP Home and after exactly 93.82 seconds my professional "ESPHome-YAML-Developer" career came to an end:
 
 <p align="center">
@@ -196,14 +198,14 @@ There is currently no library for the usage of one wire devices with the NRF5284
 At least it looks like smarter people than me are also aware of that problem: https://github.com/esphome/esphome/issues/16163
 
 
-So I just scraped the ESP Home approach for now and used something that lets me use my full c-programming potential. After all, ESP Home might just be dragging me down (might include sarcasm).
+So I just scrapped the ESP Home approach for now and used something that lets me use my full c-programming potential. After all, ESP Home might just be dragging me down (might include sarcasm).
 
-#### The Savior? - An avaliable library for NRF52840 in the Arduino IDE
-The last time I used arduino was back in universtity. There was only a white background for the IDE which caused me to delete it.
+#### The Savior? - An available library for NRF52840 in the Arduino IDE
+The last time I used arduino was back in university. There was only a white background for the IDE which caused me to delete it.
 A real developer needs a dark mode and lines of text flying through a terminal after all.
 
 However since the Arduino IDE is aimed towards beginners like me I wanted to give it a try.
-Indeed there is a library avaliable to get started with my specific NRF52840 board. 
+Indeed there is a library available to get started with my specific NRF52840 board. 
 So I added the board URL to my preferences and tried out example sketches:
 ````
 https://espressif.github.io/arduino-esp32/package_esp32_index.json
@@ -214,10 +216,10 @@ https://files.seeedstudio.com/arduino/package_seeeduino_boards_index.json
 </p>
 
 > [!Important]
-> This approach will not work and I was running straight against a wall here. Unforfunately my past self didn't know this yet and spent 4 hours of debugging and looking through forums before finally giving up.
+> This approach will not work and I was running straight against a wall here. Unfortunately my past self didn't know this yet and spent 4 hours of debugging and looking through forums before finally giving up.
 
 It turns out that programming zigbee to the nrf52840 is not possible in the Arduino IDE. Again my copilot friend from microsoft told me this.
-Appearently since some version of the nRF Connect SDK, zigbee is not supported anymore for the nrf52840 chip.
+Apparently since some version of the nRF Connect SDK, zigbee is not supported anymore for the nrf52840 chip.
 I did not even try to do the same thing in PlatformIO for Visual Studio Code, since there I was greeted with two issues:
 1. For connectivity only bluetooth shows up
 2. I cannot even find my Seeed Studio XIAO nrf52840 board
@@ -234,13 +236,13 @@ Awesome stuff and let me tell you: Now the real pain begins.
 
 In fact I had to use Ibuprophen 400 just to keep myself motivated.
 > [!Warning]
-> This is just a joke. Don't do drugs, it will ruin your code. (Except caffein. Do lots of caffein. Nobody trusts a programmer that doesn't have a coffee IV in their arm)
+> This is just a joke. Don't do drugs, it will ruin your code. (Except caffeine. Do lots of caffeine. Nobody trusts a programmer that doesn't have a coffee IV in their arm)
 
 I played around with the environment and found out the following facts:
-1. Zigbee is not avaliabe in every SDK version -> v2.9.2 seems to have the required libraries
+1. Zigbee is not avaliable in every SDK version -> v2.9.2 seems to have the required libraries
 2. It is extremely important where you create your project folder
 
-When buliding code the automatically generated folder structure grows a lot. So large in fact that the code generation will fail due  to the amount of symbols in the filepath (now we know the maximum is 250 symbols).
+When building code the automatically generated folder structure grows a lot. So large in fact that the code generation will fail due  to the amount of symbols in the filepath (now we know the maximum is 250 symbols).
 
 3. Zigbee example projects do not allow the usage of the Seeed Studio board with its bootloader
 
@@ -248,12 +250,12 @@ The Seeed Studio version acts like a usb drive. When you double press reset, it 
 > [!Caution]
 > This next step fried my bootloader and I do not have the required hardware to flash a new one.
 
-Fortunately (I thought to myself) it is possible to bulid them by adding this line in the prj.conf file:
+Fortunately (I thought to myself) it is possible to build them by adding this line in the prj.conf file:
 ```
 CONFIG_BUILD_OUTPUT_UF2=y
 ```
 Finally after hours of debugging I got my .uf2 file. You cannot imagine how impressed I was by myself at this point.
-I pulled the .uf2 into my nrf52840 and checked wheather I could find it in Home Assitant as zigbee device.
+I pulled the .uf2 into my nrf52840 and checked whether I could find it in Home Assistant as zigbee device.
 After staring at the screen for about 10 minutes I tried to generate a simple blinky sketch in the same environment.
 The LED stayed dark and I fell into a pit of rage.
 
@@ -285,10 +287,10 @@ Impressive how far you can make it with a masters degree in electrical engineeri
 
 Let's try to destroy the ESP32C6 next!
 
-### Step 2: ESP32C6 is easy to programm if only I knew how to do it
+### Step 2: ESP32C6 is easy to program if only I knew how to do it
 #### ESP Home works best for ESP devices for some reason
-I've decided to go back to ESP Home and yaml files to generate my code, since bricking the nrf52840 heavly bruised my ego.
-Hopefully the ESP32 is much easier to programm.
+I've decided to go back to ESP Home and yaml files to generate my code, since bricking the nrf52840 heavily bruised my ego.
+Hopefully the ESP32 is much easier to program.
 
 I added about 4 lines regarding zigbee in my yaml...
 ```
@@ -375,11 +377,11 @@ So first of all I do not want my battery level to show up as normal entity in Ho
 
 And the second problem is, that I pull ~20mA from my 5V supply even without sensors attached. This causes also a bit of heat since 5V*20mA=100mW are significant losses for such a small microchip. At least high enough that I was able to check if the ESP32C6 was powered on by feeling the temperature.
 
-The current draw also made me realize an oversight I have in my hardare design. I am powering all of my sensors from 3.3V at all times. Even if the microcontroller doesn't read any values. This will drain my battery quickly and sounds like a problem for my future self.
+The current draw also made me realize an oversight I have in my hardware design. I am powering all of my sensors from 3.3V at all times. Even if the microcontroller doesn't read any values. This will drain my battery quickly and sounds like a problem for my future self.
 
 > Note from future self: Why are you doing this to me?
 
-Anyways I had two options. Use the progress I made so far with ESP Home or find an alternative solution. I had only one day left before my custom PCBs arrived so it was time to finalize my code. So I made a list to help me with my decission. It is never good to rush into things.
+Anyways I had two options. Use the progress I made so far with ESP Home or find an alternative solution. I had only one day left before my custom PCBs arrived so it was time to finalize my code. So I made a list to help me with my decision. It is never good to rush into things.
 
 |               | ESP Home YAML Route  | ESP-IDF Route  |
 | ------------- | -------------------- | -------------- |
@@ -388,7 +390,7 @@ Anyways I had two options. Use the progress I made so far with ESP Home or find 
 | Weight        | libs working         | unknown        |
 | Battery SoC   | working              | unknown        |
 | Binary Output | working              | unknown        |
-| Consumption   | Deepsleep avaliable  | unknown        |
+| Consumption   | Deepsleep available  | unknown        |
 
 After I looked at this table for some time I just shrugged my shoulders, got another coffee and got to work.
 
@@ -415,7 +417,7 @@ For comparison, this is the current rating of the PlatformIO IDE extension:
 I even asked copilot if would be better to use the Arduino IDE or PlatformIO IDE, but it told me to stop whining and use ESP-IDF.
 
 I sighed, said "Here we go again" and hit install.
-There is some documentation avaliable that made the setup process easier. After folowing the installation steps and setting up the project I was ready to try my first blinky sketch (at this point I developed some ptsd from toggling LEDs).
+There is some documentation available that made the setup process easier. After following the installation steps and setting up the project I was ready to try my first blinky sketch (at this point I developed some ptsd from toggling LEDs).
 
 Initially I installed the recent ESP-IDF v6.0.1 and again had to find out, that there is no zigbee library in that version. The same problem I had with the nRF52840. At that point the only thing I was able to do was uninstalling v6.0.1 and installing v5.5.4 while crying on the floor during that entire step.
 
@@ -435,11 +437,11 @@ Again as always I was not able to find the device in Home Assistant. Even with t
 
 So I gave up and went to bed. When I laid down I already heard the first birds sing. Maybe it was just my imagination going wild due to the lack of sleep, but I swear these birds are mocking me.
 
-#### Why can I not connect to Home Assitant anymore?
-It was the third day of tinkering with the ESP32C6. I got up from bed, turned on the PC and wanted to check if maybe Home Assitant was the root cause of the failed connection.
+#### Why can I not connect to Home Assistant anymore?
+It was the third day of tinkering with the ESP32C6. I got up from bed, turned on the PC and wanted to check if maybe Home Assistant was the root cause of the failed connection.
 I was quite certain that it is not, since I was able to connect before when flashing via ESP Home, but since claude and copilot told me it is the root cause, I wanted to check anyway.
 
-When I tried loading up the main page of home assitant I was greeted with a loading screen. What was going on?
+When I tried loading up the main page of Home Assistant I was greeted with a loading screen. What was going on?
 I tried connecting with my tower PC (which I've been using so far), my laptop and my phone. Nothing..
 
 <p align="center">
@@ -460,13 +462,13 @@ I had no choice. I took my laptop, ESP32C6 and my phone so I could work remotely
 After 1 hour of installation I was able to flash the ESP32C6 with my laptop.
 
 #### Strg + C / Strg + V
-All this waiting for installations to finish made me wonder about one thing. How does the actual C-code and the build environment look in ESP Home? What if I could just copy some initial sketch from there and adjust it to fullfil my needs?
+All this waiting for installations to finish made me wonder about one thing. How does the actual C-code and the build environment look in ESP Home? What if I could just copy some initial sketch from there and adjust it to fulfill my needs?
 
 I got my third coffee and had one goal. Find the project environment in my home assistant server and then copy it to my PC.
 > [!Tip]
-> The timing couldn't have been worse, because appearently it is not possible to ssh into a server, that is not powered on.
+> The timing couldn't have been worse, because apparently it is not possible to ssh into a server, that is not powered on.
 
-I don't want to go to much into detail but I do have a second home assitant server runnning at my parents house. I had no internet at home anyways so I've decided to change my physical development environment (which is my parents kitchen).
+I don't want to go to much into detail but I do have a second Home Assistant server running at my parents house. I had no internet at home anyways so I've decided to change my physical development environment (which is my parents kitchen).
 
 I copied the yaml into ESP Home of the second home assistant server and professionally analyzed the compiling process. Then I opened my terminal and ssh'ed into the server.
 
@@ -482,7 +484,7 @@ I did find my esphome files but as you can see there are three .yaml files and o
 <img width="2360" height="832" alt="image" src="https://github.com/user-attachments/assets/d7af0dee-7db9-4d52-a240-1f37635dfc1f" />
 </p>
 
-Yes, there was no folder with the files I was seraching for. According to the build log in ESP Home there is supposed to be a build path here:
+Yes, there was no folder with the files I was searching for. According to the build log in ESP Home there is supposed to be a build path here:
 ```
 /data/build/beehivelive
 ```
@@ -496,24 +498,24 @@ Overall I sat there in the kitchen until the sun went down and I learned the fol
 1. Since some version (I forgot the exact one) ESP Home builds the code with containers
 2. Home Assistant doesn't allow me to access these containers via SSH
 
-What was my last option? Connect a monitor to my raspberry pi which runs my home assistant server. However, since the only avaliable monitor was the TV my parents wanted to use, I was stuck. Again I had to find an alternative solution...
+What was my last option? Connect a monitor to my raspberry pi which runs my home assistant server. However, since the only available monitor was the TV my parents wanted to use, I was stuck. Again I had to find an alternative solution...
 
 > [!Note]
-> I really don't know what I was tying to achieve anyways. Getting the environment form the server didn't even mean I would be able to do something actually usefull with it.
+> I really don't know what I was trying to achieve anyways. Getting the environment form the server didn't even mean I would be able to do something actually useful with it.
 
 Believe it or not but I am actually extremely lazy. If I have the possibility to automate a 5 second task, I will gladly put 2 weeks of effort in some sort of McGyver automation to handle that task for me.
 Still there is a limit of how much time I want to waste and I am starting to reach that limit.
-I started up youtube and typed "ESP-IDF Zigbee" in the search bar to check if there was a tutorial to finally guide me properly to my goal but realisied, that noone used the VS code ESP-IDF extension. Everyone was just using the Arduino IDE.
+I started up youtube and typed "ESP-IDF Zigbee" in the search bar to check if there was a tutorial to finally guide me properly to my goal but realized, that no one used the VS code ESP-IDF extension. Everyone was just using the Arduino IDE.
 
-This ment I finally came back to my senses and started developing on the most reasonable approach: ESP32C6 + Arduino IDE
+This meant I finally came back to my senses and started developing on the most reasonable approach: ESP32C6 + Arduino IDE
 
 #### Arduino IDE might not be that bad after all
-The statement "most reasonable approach" did not mean, that I would immediately write 1000 lines of code and just flash them without any other obstructions in my way.
+The statement "most reasonable approach" did not mean, that I would immediately write 1000 lines of code and just flash them without any other obstacles in my way.
 On a positive note I was able to flash the Zigbee_Temperature_Sensor example immediately.
 So far so good, it also showed up in Home Assistant and even reported a temperature reading of the internal sensor. (Time to reward myself with another cup of coffee)
 
-However when I frankensteined the Zigbee_Temperature_Sensor and the Zigbee_Analog_Input_Output together, the device did not connect and I recieved loads of Zigbee Stack faults on the serial monitor.
-Nothing I tried to change in the C-code seemed to work, exept removing the _zbAnalogSensor.reportTemperature()_ function call.
+However when I frankensteined the Zigbee_Temperature_Sensor and the Zigbee_Analog_Input_Output together, the device did not connect and I received loads of Zigbee Stack faults on the serial monitor.
+Nothing I tried to change in the C-code seemed to work, except removing the _zbAnalogSensor.reportTemperature()_ function call.
 There is a limited amount of faults I can handle per day so I went to bed and woke up the next day to the sound of an impact drill in the ceiling below me.
 
 After a healthy amount of sleep I remembered one of the youtube tutorials. The creator said to always erase the flash before re-programming.
@@ -529,7 +531,7 @@ I selected the same settings and there it was. Finally an analog reading inside 
 <img width="364" height="257" alt="image" src="https://github.com/user-attachments/assets/2c6d8c83-4fc4-48bf-8cb9-18eba7c816fe" />
 </p>
 
-Of course it is not 183°C inside, this was just the raw ADC value of the battery voltage measurment (which was alos not connected at this point). Initially I tried to get the battery SoC reading to show up again in the power configuration cluster. Appearently this is where this kind of information is supposed to show up for a zigbee device.
+Of course it is not 183°C inside, this was just the raw ADC value of the battery voltage measurement (which was also not connected at this point). Initially I tried to get the battery SoC reading to show up again in the power configuration cluster. Apparently this is where this kind of information is supposed to show up for a zigbee device.
 
 After digging through the Arduino libraries I even found an enumerator inside _esp_zigbee_zcl_common.h_ listing all the clusters, but unfortunately not all of them are ready to use "out of the box" like temperature or analog readings. I wasted another 3 hours tinkering and will solve this sometime in the future. Kind regards to my future self. 
 > Note from future self: Again?
@@ -551,7 +553,7 @@ As a next step I included the DS18B20 sensors I had still at home. I tried using
 > [!Note]
 > Using the newest version of a microcontroller can be quite challenging if you lack experience like me.
 
-At least there is a 1-Wire library that is compatible and with [some code I stole from this forum](https://forum.seeedstudio.com/t/xiao-esp32c6-and-the-ds18b20/293778/10) I was able to finally transmit my first external temperature reading from the ESP32C6 to Home Assitant!
+At least there is a 1-Wire library that is compatible and with [some code I stole from this forum](https://forum.seeedstudio.com/t/xiao-esp32c6-and-the-ds18b20/293778/10) I was able to finally transmit my first external temperature reading from the ESP32C6 to Home Assistant!
 
 The downside is, it only works as long as there are not multiple sensors connected on the same 1-Wire bus. I threw a little party by myself in the room anyways.
 Developing can be quite rewarding 0.5% of the time.
@@ -576,7 +578,7 @@ I used the serial monitor to show their addresses and connected my three sensors
 </p>
 
 > [!Important]
-> What now follows shows quite clearly, why sleep and breakes are important (especially coffee breakes)!
+> What now follows shows quite clearly, why sleep and breaks are important (especially coffee breaks)!
 
 Seeing the address shown from least significant byte to most significant in my serial monitor was triggering to me and so I decided to implement a quick fix in my code. Nothing special, just one altered line:
 ```
@@ -588,7 +590,7 @@ correct: for(int i = 7; i >= 0; i--)
 
 I don't want to exaggerate but there is only one programming mistake in human history that had similar consequences and that would be the self destruction of the [Ariane 5 Flight 501](https://en.wikipedia.org/wiki/Ariane_flight_V88).
 
-The ESP32C6 did not like counting into interger overflow one bit and crashed on me over and over again. It is quite embarrasing how long it took me to find this bug, since I thought I caused timing issues due to my excessive use of _serial.print()_.
+The ESP32C6 did not like counting into integer overflow one bit and crashed on me over and over again. It is quite embarrassing how long it took me to find this bug, since I thought I caused timing issues due to my excessive use of _serial.print()_.
 How did I come to this conclusion? Because the code didn't crash when I commented out my serial communication calls (which included the for loop).
 
 <p align="center">
@@ -610,7 +612,7 @@ I read through different forums and had conversations with Claude AI to learn a 
 It was only possible to rename one of them by setting the model name of the first endpoint.
 However, the entity names inside Home Assistant are still unique so I can still distinguish between them.
 
-Also as a fun little sidenote. When I selected the analog cluster and selected an unitless count as an application _setAnalogInputApplication(ESP_ZB_ZCL_AI_COUNT_UNITLESS_OTHER)_ it was possible to change the name. So there seems to be some dependency on the application of the analog cluster. Thinking about it hurts my brain so I will just stop it.
+Also as a fun little side note. When I selected the analog cluster and selected an unitless count as an application _setAnalogInputApplication(ESP_ZB_ZCL_AI_COUNT_UNITLESS_OTHER)_ it was possible to change the name. So there seems to be some dependency on the application of the analog cluster. Thinking about it hurts my brain so I will just stop it.
 
 Due to of all the debugging I did in that regard I was able to find out the solution to another earlier problem. Inside the _ZigbeeEP.h_ header file I found the following functions:
 ````
@@ -620,7 +622,7 @@ Due to of all the debugging I did in that regard I was able to find out the solu
   bool setBatteryVoltage(uint8_t voltage);                                                                 // voltage in 100mV (example value 35 for 3.5V)
   bool reportBatteryPercentage();                                                                          // battery voltage is not reportable attribute
 ````
-These funtions allow an integration of battery information into the power configuration cluster defined in the [Zigbee Cluster Library Specification](https://zigbeealliance.org/wp-content/uploads/2019/12/07-5123-06-zigbee-cluster-library-specification.pdf).
+These functions allow an integration of battery information into the power configuration cluster defined in the [Zigbee Cluster Library Specification](https://zigbeealliance.org/wp-content/uploads/2019/12/07-5123-06-zigbee-cluster-library-specification.pdf).
 
 Or in another words that even I was able to understand: Battery full or not go from ESP32 to here:
 
@@ -629,11 +631,11 @@ Or in another words that even I was able to understand: Battery full or not go f
 </p>
 
 The only success in human history comparable to this milestone was the [Apollo 11 Mission](https://en.wikipedia.org/wiki/Apollo_11).
-Apollo 11 cost around 355 Million US-Dollar taken inflation into account. I got my battery level reading into Home Assistant with just a fraction of the effort or cost. However, I believe I might have used the same amount of caffein.
+Apollo 11 cost around 355 Million US-Dollar taken inflation into account. I got my battery level reading into Home Assistant with just a fraction of the effort or cost. However, I believe I might have used the same amount of caffeine.
 
-Regarding the HX711 weight sensor it was quite simple to get it into Home Assistant, since I was able to reuse some code of other sensors to define a new zigbee end device. After that it was only required to add 2-3 lines of code. Everything else is handeled in the background by the [HX711 library](https://github.com/bogde/HX711).
+Regarding the HX711 weight sensor it was quite simple to get it into Home Assistant, since I was able to reuse some code of other sensors to define a new zigbee end device. After that it was only required to add 2-3 lines of code. Everything else is handled in the background by the [HX711 library](https://github.com/bogde/HX711).
 
-There was one last problem left: The only suited zigbee cluster I had avaliable was the analog input cluster. This cluster however does not feature any weight application. The avaliable options are stored in the _esp_zigbee_zcl_analog_input.h_ header file.
+There was one last problem left: The only suited zigbee cluster I had available was the analog input cluster. This cluster however does not feature any weight application. The available options are stored in the _esp_zigbee_zcl_analog_input.h_ header file.
 ````
 /** @brief Values for Analog Input cluster applications type*/
 typedef enum {
@@ -667,7 +669,7 @@ If there was no possibility to display weight in kg I wanted to at least remove 
 | ESP_ZB_ZCL_AI_APP_TYPE_OTHER | °C |
 | ESP_ZB_ZCL_AI_APP_TYPE_COUNT_UNITLESS | counts |
 
-As shown in the table the only two applications that seemed useful turned out to be useless. But then something happened. There was the perfect combination of low blood sugar, amount of caffein and lack of sleep in my system and then I saw this line of code in the header file:
+As shown in the table the only two applications that seemed useful turned out to be useless. But then something happened. There was the perfect combination of low blood sugar, amount of caffeine and lack of sleep in my system and then I saw this line of code in the header file:
 ````
 #define ESP_ZB_ZCL_AI_SET_APP_TYPE_WITH_ID(_type, _id) (((_type & 0xff) << 16) | (_id & 0xffff))
 ````
