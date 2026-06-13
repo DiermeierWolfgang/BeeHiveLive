@@ -547,8 +547,8 @@ It is just another problem I can ignore until I will regret it. Similar to the b
 
 For now the SoC is just shows up as percentage value. That should be good enough. It is calculated by a simple formula taking a voltage divider in my circuit and the analog resolution into account:
 ```
-float voltage   = (adc_value / 1023.0f) * 3.3f * 1.694915254237288;   // 1023: 10-bit adc / 3.3: max voltage / 1.69... voltage divider
-float soc = (voltage - 3.0f) * (100.0f / (4.2f - 3.0f));              // Li-Ion 3.0–4.2V → SoC 0–100%
+float voltage   = (adc_value / 1023.0f) * 3.3f * 1.9696066388226950354609929078014f;   // 1023: 10-bit adc / 3.3: max voltage / 1.96... voltage divider incl. inner gpio resistance
+float soc = (voltage - 3.0f) * (100.0f / (4.11f - 3.0f));              // Li-Ion 3.0–4.11V → SoC 0–100%
 ```
 
 <p align="center">

@@ -111,9 +111,9 @@ void initInternalTempSensor() {
   // Define the device is battery powered as information for the power cluster. Required for the Battery SoC information.
   zbInternalTempSensor.setPowerSource(ZB_POWER_SOURCE_BATTERY);
   // Set minimum and maximum temperature measurement value (10-50°C is default range for chip temperature measurement)
-  zbInternalTempSensor.setMinMaxValue(10, 50);
+  zbInternalTempSensor.setMinMaxValue(-40, 125);
   // Optional: Set default (initial) value for the temperature sensor to 10.0°C to match the minimum temperature measurement value
-  zbInternalTempSensor.setDefaultValue(10.0);
+  zbInternalTempSensor.setDefaultValue(-40.0);
   // Set the tolerance
   zbInternalTempSensor.setTolerance(0.01);
   // Register end point
@@ -122,7 +122,7 @@ void initInternalTempSensor() {
 
 void initSOCSensor() {
   pinMode(BATTERY_VOLTAGE_PIN, INPUT);
-  analogReadResolution(12);
+  analogReadResolution(10);
 }
 
 void initDS18B20() {
@@ -130,7 +130,7 @@ void initDS18B20() {
     // Set minimum and maximum temperature measurement value
     zbDS18B20TempSensor[i].setMinMaxValue(-40, 85);
     // Optional: Set default (initial) value for the temperature sensor to 20.0°C
-    zbDS18B20TempSensor[i].setDefaultValue(20.0);
+    zbDS18B20TempSensor[i].setDefaultValue(-40.0);
     // Set the tolerance
     zbDS18B20TempSensor[i].setTolerance(0.01);
     // Register end points
@@ -223,8 +223,8 @@ void internal_temp_sensor_value_update() {
 void soc_sensor_value_update() {
   int adc_value = analogRead(BATTERY_VOLTAGE_PIN);
   // fac = ((1000+590)/1000) * (3.71/2.91) <- factor determined during testing
-  float voltage   = (adc_value / 4095.0f) * 3.3f * 2.027113402f;   // 1023: 10-bit adc / 3.3: max voltage / 2.027113402... voltage divider incl. inner gpio resistance
-  float soc = (voltage - 3.0f) * (100.0f / (4.2f - 3.0f));              // Li-Ion 3.0–4.2V → SoC 0–100%
+  float voltage   = (adc_value / 1023.0f) * 3.3f * 1.9696066388226950354609929078014f;   // 1023: 10-bit adc / 3.3: max voltage / 1.969606638822... voltage divider incl. inner gpio resistance
+  float soc = (voltage - 3.0f) * (100.0f / (4.11f - 3.0f));              // Li-Ion 3.0–4.2V → SoC 0–100%
   soc = constrain(soc, 0.0f, 100.0f);                                   // Limit from 0% to 100%
 
   Serial.printf("Battery:              ADC: %d Voltage: %.2fV SoC: %.1f%%\r\n", adc_value, voltage, soc);
@@ -423,7 +423,7 @@ void setup() {
     }*/
     enterDeepSleep(10, false);
   } else {
-    Serial.printf("Zigbee started successfully! TX strength: %d dB\n", preferences.getInt("TXPower", IEEE802154_TXPOWER_INDEX_MIN));
+    Serial.printf("Zigbee started successfully! TX strength: %d dB\n", preferences.getInt("TXPower", IEEE802154_TXPOWER_VALUE_MAX));
   }
   Serial.println("Connecting to network");
   int connectionDuration = 0;
