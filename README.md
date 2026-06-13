@@ -804,13 +804,13 @@ I took them out and checked the temperature with thermal imaging. Unfortunately,
 >   
 > If we have a temperature difference between ambient air and the cell we can calculate the power transfered between them using the heat convection coefficient. That transferred power over time will cause a change in temperature of the Li-Ion cell due to its thermal capacity and the stored energy as heat.
 > Using an excel document I created a function of the temperature over time by recalculating the power transfer and stored heat in discrete time steps.
-> The time axis nof the graph describes the cooldown duration. At 15min the estimated temperature 15min before the actual measurment is shown:
+> The x-axis of the graph describes the cooldown duration before the actual measurment at time 0. The y-axis shows the initial temperature assuming the stated cooldown time of the x-axis.
 >
 > <p align="center">
 > <img width="2371" height="837" alt="image" src="https://github.com/user-attachments/assets/42f9b081-21cd-48f4-a1f4-cf44c6585325" />
 > </p>
 > 
-> So to answer the question. When these assumptions are correct, the 18650 Li-Ion cells were above 50°C!
+> So to answer the question. When these assumptions are correct, the 18650 Li-Ion cells were above 50°C! Most likely even higher since we neglected other forms of heat transfer.
 
 There was no short circuit in the PCBA and also the cell voltage was sitting stable at 4.11V. Therefore the most likely explaination is the direct sunlight hitting my bee hive sensor and heating up the cells through the see-through cover.
 From now on the assembly will not be placed in direct sunlight anymore.
