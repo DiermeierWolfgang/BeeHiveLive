@@ -613,7 +613,7 @@ It was wednesday during my summer vacation and the third day where the electrici
 I read through different forums and had conversations with Claude AI to learn a few things about 1-Wire. With that new knowledge I was able to connect all three temperature sensors at the same time and distinguish between them using their individual addresses. But there was once again a new challenge: Even after I implemented all of the three temperature readings as a different zigbee endpoint in my code and gave these individual endpoints they all showed up in Home Assistant just named "Temperature".
 
 <p align="center">
-<img width="160" height="104" alt="image" src="https://github.com/user-attachments/assets/ae595f62-1a83-4781-8c3f-09094f5970af" />
+<img width="320" height="208" alt="image" src="https://github.com/user-attachments/assets/ae595f62-1a83-4781-8c3f-09094f5970af" />
 </p>
 
 It was only possible to rename one of them by setting the model name of the first endpoint.
@@ -786,13 +786,13 @@ I had a few assumtions I wanted to test on the weekend:
 Point 1 and 2 were easy to check. I was able to see the voltage on the input of my circuit.
 As a next step I took the bee hive sensor to my bench, opened it up and realized, that the batteries were quite warm.
 Touching them by hand was possible but the temperature was so high that I initially assumed a short or overvoltage at the cells.
-I took them out and checked the temperature with thermal imaging. Unfortunately, it took me 10-15 minutes to get the camera, so the cells already cooled back down:
+I took them out and checked the temperature with thermal imaging. Unfortunately, it took me about 15 minutes to get the camera, so the cells already cooled back down:
 
 <p align="center">
-<img width="707" height="927" alt="image" src="https://github.com/user-attachments/assets/56b2c7ba-87a2-4100-9f04-72bd623ae911" />
+<img width="350" height="450" alt="image" src="https://github.com/user-attachments/assets/56b2c7ba-87a2-4100-9f04-72bd623ae911" />
 </p>
 
-> The question is: If the cells cooled back down to ~29.5°C after standing on my workbench for 10-15 minutes, how hot where they when I first opened the enclosure?
+> The question is: If the cells cooled back down to ~29.5°C after standing on my workbench for 15 minutes, how hot where they when I first opened the enclosure?
 > Let's procrastinate shortly for this small calculation exercise!
 >
 > To answer this question we need to find out two things:
@@ -802,5 +802,60 @@ I took them out and checked the temperature with thermal imaging. Unfortunately,
 >    - I am going to asume 14 W/(m²*K) as heat convection coefficient based on [this study](https://www.sciencedirect.com/science/article/abs/pii/S1359431122014892).
 >    - As a simplification I am only taking heat convection into account
 >   
-> If we start with the temperature difference between air and the cell we can calculate the power transfered between the cell and the surrounding air. That transferred power over time will cause a difference in temperature of the Li-Ion cell due to its thermal capacity.
-> Using an excel document I created a function of the temperature over time.
+> If we have a temperature difference between ambient air and the cell we can calculate the power transfered between them using the heat convection coefficient. That transferred power over time will cause a change in temperature of the Li-Ion cell due to its thermal capacity and the stored energy as heat.
+> Using an excel document I created a function of the temperature over time by recalculating the power transfer and stored heat in discrete time steps.
+> The time axis nof the graph describes the cooldown duration. At 15min the estimated temperature 15min before the actual measurment is shown:
+>
+> <p align="center">
+> <img width="2371" height="837" alt="image" src="https://github.com/user-attachments/assets/42f9b081-21cd-48f4-a1f4-cf44c6585325" />
+> </p>
+> 
+> So to answer the question. When these assumptions are correct, the 18650 Li-Ion cells were above 50°C!
+
+There was no short circuit in the PCBA and also the cell voltage was sitting stable at 4.11V. Therefore the most likely explaination is the direct sunlight hitting my bee hive sensor and heating up the cells through the see-through cover.
+From now on the assembly will not be placed in direct sunlight anymore.
+
+To get back to the actual issue: 
+I checked the solar charging circuit by measuring the diodes D1 and D2. I also checked if the output voltage and input voltage was stable. After I did not find an issue with these components I moved on to the Mosfet M1 and the CN3791 itself.
+
+<p align="center">
+<img width="429" height="299" alt="image" src="https://github.com/user-attachments/assets/e8b7ca57-f210-4302-a1a8-1426ce700818" />
+</p>
+
+To check if the CN3791 properly drives the Mosfet, I connected my power supply to the PV-Input and set it to 20V. Afterwards I measured the voltage on the MPPT-Pin of the CN3791 which was 1.42V. According to the datasheet of the CN3791 the pins voltage is regulated to 1.205V. This means if the voltage on this pin 6 is higher than 1.205V, the output is active and the CN3791 controls the gate of the P-Channel MOSFET "M1" through the pin 10. That means that the MPPT voltage is still set correctly and there is no damage to the voltage divider.
+
+> [!Note]
+> The P-Channel MOSFET gives me a few headaches eversince the charging stopped working. When I went through every component to find a possible root cause for charging problems I realized, that this mosfet is only rated for a drain-to-source voltage of 20V.
+>
+> It is a design mistake I did due to misplaced trust into component selection filters. In the component selection I filtered for 40V rated mosfets and never double-checked with the actual datasheet. So now I have this 20V mosfet in my design operating slightly above its maximum rating. If you ever meet me in person then please don't bring it up. I have still nightmares because of this.
+>
+> Of course it is already fixed in my schematic in case I ever have to order new PCBAs.
+
+Next I used my most advanced and high end equipment on hand to check the drive output pin 10 of the CN3791 IC. As shown on the oscilloscope the drive output also works just fine:
+
+<p align="center">
+<img width="635" height="470" alt="image" src="https://github.com/user-attachments/assets/81621ff9-e3fa-49f3-8e38-d016c1e881de" />
+</p>
+
+During that measurement the Li-Ion cells were also charged without any issues, so everything is suddenly fine?
+Well the problem was actually, that the cell voltage of 4.11V was already picked up by the CN3791 as "fully charged". It pulled the "Done" pin 4 low and stopped charging.
+I was supposed to see the the status of this pin as described in the software section, however it seems like I found a software bug.
+
+As long as the ESP32C6 is not using deep sleep, the status of the "Done" and "Charge" pin on the CN3791 are transmitted via zigbee. Once deep sleep is active, these binary states are frozen.
+I was also able to verify this using the charge pin. Since it is currently half past 9 and my ESP32C6 still claims to be charging.
+So either my bee hive sensor is lying or I made a brakethrough in solar power by using light of other stars than the sun to charge?
+
+### Cell voltage measurement noise
+To fix the unstable SOC readings I went back into my design and added a capacitor to the analog input of the ESP32C6 to filter the signal.
+Since I am not going to order a new PCBA for every single small mistake I fixed this issue on my current design by adding a THD capacitor to the back of my ESP32.
+
+<p align="center">
+<img width="255" height="231" alt="image" src="https://github.com/user-attachments/assets/803a8acb-24aa-4f2d-927b-dea415485d76" />
+</p>
+
+From a decoupling/filtering point of view this was far from the best solution, since the long legs on the capacitor add parasitic resistance and inductance. But at least for the problematic low frequency noise this improved the measurment significantly.
+Red shows the measured SOC without capacitor. Green shows the measurement after adding the capacitor for signal filtering:
+
+<p align="center">
+<img width="2289" height="447" alt="image" src="https://github.com/user-attachments/assets/5b706032-62eb-4cd5-a21b-29c8bd924d25" />
+</p>
