@@ -763,3 +763,44 @@ void initAntenna() {
   digitalWrite(RF_SWITCH_PORT_SELECT, HIGH);
 }
 ````
+
+### Charging feedback issues
+After my vacation was over and I was back in the office the bee hive sensor operated for one week without other adjustments. I checked in every day to monitor the weight and temperature of my bees and the charging behavior of the solar charging circuit.
+I noticed that the charging SOC stopped at ~90% with unstable readings:
+
+<p align="center">
+<img width="1441" height="557" alt="image" src="https://github.com/user-attachments/assets/3c2ba710-4d54-4d2c-9464-3101d49c725f" />
+</p>
+
+Additionally, during the complete week there was no feedback from the charging IC CN3791.
+In case the Li-Ion cells are fully charged the "Done" output of the CN3791 should be pulled low which is also monitored by the ESP32C6.
+At least during sun hours either the "Done" output or the "Charge" output should be pulled low.
+
+Since the ESP32C6 was still operating I assumed, that the ESP32C6 and the 3.3V-LDO between Li-Ion cells had to be fine. Also the Li-Ion cells themselves obviously provided power to the ESP32 and the sensors.
+I had a few assumtions I wanted to test on the weekend:
+1. Is the PV-Panel broken?
+2. Is there a short in the wiring between PV-Panels and my circuit? (Maybe the bees now eat wiring for some reason?)
+3. Is the MPPT voltage on my circuitry still set correctly?
+4. Are there broken components in the circuit?
+
+Point 1 and 2 were easy to check. I was able to see the voltage on the input of my circuit.
+As a next step I took the bee hive sensor to my bench, opened it up and realized, that the batteries were quite warm.
+Touching them by hand was possible but the temperature was so high that I initially assumed a short or overvoltage at the cells.
+I took them out and checked the temperature with thermal imaging. Unfortunately, it took me 10-15 minutes to get the camera, so the cells already cooled back down:
+
+<p align="center">
+<img width="707" height="927" alt="image" src="https://github.com/user-attachments/assets/56b2c7ba-87a2-4100-9f04-72bd623ae911" />
+</p>
+
+> The question is: If the cells cooled back down to ~29.5°C after standing on my workbench for 10-15 minutes, how hot where they when I first opened the enclosure?
+> Let's procrastinate shortly for this small calculation exercise!
+>
+> To answer this question we need to find out two things:
+> 1. How much heat can be stored inside a typical Li-Ion 18650 cell or in other words: What is its thermal capacity?
+>    - I am going to assume a thermal capacity of 1000 J/(kg*K) based on [this source](http://batterydesign.net/specific-heat-capacity-of-lithium-ion-cells/?srsltid=AfmBOopFGdwng84xYbtfqtYw4F1H269hViXRv6glTufAXOPyDeTv4uzo).
+> 2. How fast does the Li-Ion cell radiate its heat to the environment? What is its heat transfer coefficient?
+>    - I am going to asume 14 W/(m²*K) as heat convection coefficient based on [this study](https://www.sciencedirect.com/science/article/abs/pii/S1359431122014892).
+>    - As a simplification I am only taking heat convection into account
+>   
+> If we start with the temperature difference between air and the cell we can calculate the power transfered between the cell and the surrounding air. That transferred power over time will cause a difference in temperature of the Li-Ion cell due to its thermal capacity.
+> Using an excel document I created a function of the temperature over time.
