@@ -350,7 +350,7 @@ void hx711_sensor_value_update() {
       float change_rate_weight = abs(weight - preferences.getFloat("weight", 0));
 
       if (weight >= 0) {  // Ignore all values below 0kg
-        if (change_rate_weight >= MAX_CHANGE_RATE_WEIGHT) {  // Do not report the new value if it is further than 10kg from the old value
+        if (change_rate_weight <= MAX_CHANGE_RATE_WEIGHT) {  // Do not report the new value if it is further than 10kg from the old value
           zbHX711Sensor.setAnalogInput(weight);
           zbHX711Sensor.reportAnalogInput();
           expectedReports++;
