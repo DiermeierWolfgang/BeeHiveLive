@@ -233,9 +233,12 @@ void internal_temp_sensor_value_update() {
 void soc_sensor_value_update() {
   int adc_value = analogRead(BATTERY_VOLTAGE_PIN);
   // fac = ((1000+590)/1000) * (3.71/2.91) <- factor determined during testing
-  float voltage   = (adc_value / 1023.0f) * 3.3f * 1.9696066388226950354609929078014f;   // 1023: 10-bit adc / 3.3: max voltage / 1.969606638822... voltage divider incl. inner gpio resistance
-  float soc = (voltage - 3.0f) * (100.0f / (4.11f - 3.0f));              // Li-Ion 3.0–4.2V → SoC 0–100%
-  soc = constrain(soc, 0.0f, 100.0f);                                   // Limit from 0% to 100%
+  float voltage   = (adc_value / 1023.0f) * 3.3f * 1.9696066f;                  // 1023: 10-bit adc / 3.3: max voltage / 1.969606638822... voltage divider incl. inner gpio resistance
+  if (!digitalRead(CN3791_DONE_PIN)) {
+    preferences.putFloat("charged_voltage", voltage);
+  }
+  float soc = (voltage - 3.0f) * (100.0f / (preferences.getFloat("charged_voltage", 4.11f) - 3.0f));    // Li-Ion 3.0–4.11V → SoC 0–100%
+  soc = constrain(soc, 0.0f, 100.0f);                                                                   // Limit from 0% to 100%
 
   Serial.printf("Battery:              ADC: %d Voltage: %.2fV SoC: %.1f%%\r\n", adc_value, voltage, soc);
 
