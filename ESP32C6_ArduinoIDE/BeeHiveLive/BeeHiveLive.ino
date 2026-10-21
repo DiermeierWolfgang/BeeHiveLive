@@ -10,6 +10,10 @@
 #include <Preferences.h>
 #include <hal/ieee802154_ll.h>
 
+#ifndef IEEE802154_TXPOWER_VALUE_MAX
+#define IEEE802154_TXPOWER_VALUE_MAX 20
+#endif
+
 // Input/Output definition
 #define BATTERY_VOLTAGE_PIN   A2
 #define I2C_CLK_PIN           D5
@@ -72,6 +76,9 @@ static const char* DS18B20_NAME[] = {
   IEEE802154_TXPOWER_VALUE_MIN,
   IEEE802154_TXPOWER_INDEX_MIN
 };*/
+
+uint8_t sentReports = 0;
+uint8_t expectedReports = 0;
 
 
 ZigbeeTempSensor zbInternalTempSensor = ZigbeeTempSensor(INTERNAL_TEMP_SENSOR_ENDPOINT_NUMBER);
@@ -215,8 +222,11 @@ void initZigbee() {
 void internal_temp_sensor_value_update() {
   float tsens_value = temperatureRead();
   Serial.printf("Int. Temperature:     Temp:  %.2f °C\n", tsens_value);
-  zbInternalTempSensor.setTemperature(tsens_value);
-  zbInternalTempSensor.reportTemperature();
+  if (tsens_value != -40) {
+    zbInternalTempSensor.setTemperature(tsens_value);
+    zbInternalTempSensor.reportTemperature();
+    expectedReports++;
+  }
 }
 
 // Battery SoC Sensor
@@ -231,8 +241,9 @@ void soc_sensor_value_update() {
 
   // Battery information is placed into first endpoint
   zbInternalTempSensor.setBatteryPercentage((uint8_t) soc);
-  zbInternalTempSensor.setBatteryVoltage((uint8_t) voltage * 10);
+  zbInternalTempSensor.setBatteryVoltage((uint8_t) (voltage * 10));
   zbInternalTempSensor.reportBatteryPercentage();
+  expectedReports++;
 }
 
 /* Temporary function to read the address of one single connected one wire device
@@ -283,6 +294,7 @@ void readAllOneWireTemps(float *tsens_value) {
             tsens_value[j] = temp;                                // Store value in correspondind index j for the sensor
         } else {
             printf("%-10s → READ FAILED\n", DS18B20_NAME[j]);     // Print failure on serial monitor
+            tsens_value[j] = -40;                                 // set to -40 as invalid sensor value
         }
       }
       Serial.println();
@@ -297,8 +309,11 @@ void DS18B20_temp_sensor_value_update() {
   readAllOneWireTemps(tsens_value);                               // Get temperature readings from one wire bus and store them in array
   
   for (int i = 0; i < DS18B20_AMOUNT; i++) {                      // Loop through all known temperature sensor addresses
-    zbDS18B20TempSensor[i].setTemperature(tsens_value[i]);        // Set temperature in zigbee endpoint
-    zbDS18B20TempSensor[i].reportTemperature();                   // report temperature via zigbee
+    if (tsens_value[i] != -40) {
+      zbDS18B20TempSensor[i].setTemperature(tsens_value[i]);        // Set temperature in zigbee endpoint
+      zbDS18B20TempSensor[i].reportTemperature();                   // report temperature via zigbee
+      expectedReports++;
+    }
   }
 }
 
@@ -327,8 +342,11 @@ void hx711_sensor_value_update() {
       float weight = raw_value * hx711gain + hx711offset;
       // power down the IC to safe battery life
       hx711.power_down();
-      zbHX711Sensor.setAnalogInput(weight);
-      zbHX711Sensor.reportAnalogInput();
+      if (weight != 0) {
+        zbHX711Sensor.setAnalogInput(weight);
+        zbHX711Sensor.reportAnalogInput();
+        expectedReports++;
+      }
 
       Serial.printf("HX711 reading:        ADC: %.0f               Weight: %.3fkg", raw_value, weight);
       Serial.println();
@@ -353,6 +371,8 @@ void cn3791_status_update() {
   zbCN3791Done.setBinaryInput(cn3791_done);
   zbCN3791Chrg.reportBinaryInput();
   zbCN3791Done.reportBinaryInput();
+  expectedReports++;
+  expectedReports++;
 }
 
 void enterDeepSleep(uint duration, bool override) {
@@ -378,6 +398,16 @@ void enterDeepSleep(uint duration, bool override) {
   }
 }
 
+static void zcl_send_status_cb(esp_zb_zcl_command_send_status_message_t message) {
+  sentReports++;
+}
+
+void waitForReports(uint32_t timeoutMs = 5000) {
+  uint32_t start = millis();
+  while (sentReports < expectedReports && (millis() - start) < timeoutMs) {
+    delay(20);
+  }
+}
 
 
 /********************* Arduino functions **************************/
@@ -411,18 +441,11 @@ void setup() {
   // When all EPs are registered, start Zigbee in End Device mode
   if (!Zigbee.begin()) {
     Serial.println("Zigbee failed to start!");
-    // Trying a different TX strength on next startup
-    /*int lastTXPower = preferences.getInt("TXPower", IEEE802154_TXPOWER_INDEX_MIN);
-    for (int i = 0; i < ((sizeof(TXPower) / sizeof(TXPower[0])) - 1); i++) {
-      if (lastTXPower == TXPower[i]) {
-        preferences.putInt("TXPower", TXPower[i+1]);
-        break;
-      } else {
-        preferences.putInt("TXPower", TXPower[0]);
-      }
-    }*/
     enterDeepSleep(10, false);
   } else {
+    esp_zb_lock_acquire(portMAX_DELAY);
+    esp_zb_zcl_command_send_status_handler_register(zcl_send_status_cb);
+    esp_zb_lock_release();
     Serial.printf("Zigbee started successfully! TX strength: %d dB\n", preferences.getInt("TXPower", IEEE802154_TXPOWER_VALUE_MAX));
   }
   Serial.println("Connecting to network");
@@ -433,16 +456,6 @@ void setup() {
     connectionDuration++;
     if (connectionDuration > 600) { // 60 second timeout
         Serial.println("Failed to rejoin, entering deep sleep");
-        // Trying a different TX strength on next startup
-        /*int lastTXPower = preferences.getInt("TXPower", IEEE802154_TXPOWER_INDEX_MIN);
-        for (int i = 0; i < ((sizeof(TXPower) / sizeof(TXPower[0])) - 1); i++) {
-          if (lastTXPower == TXPower[i]) {
-            preferences.putInt("TXPower", TXPower[i+1]);
-            break;
-          } else {
-            preferences.putInt("TXPower", TXPower[0]);
-          }
-        }*/
         enterDeepSleep(10, false);
     }
   }
@@ -477,7 +490,7 @@ void loop() {
   DS18B20_temp_sensor_value_update();
   hx711_sensor_value_update();
   cn3791_status_update();
-  //delay(2000);
+  waitForReports();
   enterDeepSleep(zbDeepSleep.getAnalogOutput(), true);
 
   // 10 sec delay in case no deep sleep is defined
