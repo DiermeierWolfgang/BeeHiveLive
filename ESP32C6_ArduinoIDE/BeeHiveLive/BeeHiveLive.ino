@@ -53,6 +53,7 @@
 // HX711 weight sensor definitions
 #define HX711_INITIAL_GAIN    0.000045454545
 #define HX711_INITIAL_OFFSET  1.647
+#define MAX_CHANGE_RATE_WEIGHT 10
 
 // Known DS18B20 addresses (0x28 at the end represents device family code)
 static const OneWireNg::Id DS18B20[] = {
@@ -342,13 +343,19 @@ void hx711_sensor_value_update() {
     if (hx711.is_ready()) {
       // get raw data from HX711
       float raw_value = hx711.get_units(10);
-      float weight = raw_value * hx711gain + hx711offset;
       // power down the IC to safe battery life
       hx711.power_down();
-      if (weight != 0) {
-        zbHX711Sensor.setAnalogInput(weight);
-        zbHX711Sensor.reportAnalogInput();
-        expectedReports++;
+
+      float weight = raw_value * hx711gain + hx711offset;
+      float change_rate_weight = abs(weight - preferences.getFloat("weight", 0));
+
+      if (weight >= 0) {  // Ignore all values below 0kg
+        if (change_rate_weight >= MAX_CHANGE_RATE_WEIGHT) {  // Do not report the new value if it is further than 10kg from the old value
+          zbHX711Sensor.setAnalogInput(weight);
+          zbHX711Sensor.reportAnalogInput();
+          expectedReports++;
+        }
+        preferences.putFloat("weight", weight);
       }
 
       Serial.printf("HX711 reading:        ADC: %.0f               Weight: %.3fkg", raw_value, weight);
